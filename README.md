@@ -128,13 +128,13 @@ Each region’s and prediction conditions (initial or thereafter) deep learning 
 | Layer | Layer Number  | Node                |
 |:----: | :-----------: |:------------------: |
 | Input | 1             | # of input features |
-|       | 2             |  128                |
-|       | 3             |  128                |
+|Hidden | 2             |  128                |
+|Hidden | 3             |  128                |
 |Hidden | 4             |   64                |
-|       | 5             |   64                |
-|       | 6             |   32                |
-|       | 7             |  16                 |
-|       | 8             |  5                  |
+|Hidden | 5             |   64                |
+|Hidden | 6             |   32                |
+|Hidden | 7             |  16                 |
+|Hidden | 8             |  5                  |
 | Output| 9             |  1                  |
 
 Table 1.  The initial conditions and after Wasatch Snow-ML models deep learning structure consists of an input layer determined by the number of ideal region-specific features, and the same layer-node for all hidden layers and output the layer.
