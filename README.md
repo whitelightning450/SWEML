@@ -26,7 +26,7 @@ Below is a high-level overview of the necessary steps, which we go into more det
 
 
 
-<p align="center">![InitialRun](https://user-images.githubusercontent.com/33735397/155603114-d0f56d80-7b1a-4899-a567-ca76527c3787.PNG)
+(https://user-images.githubusercontent.com/33735397/155603114-d0f56d80-7b1a-4899-a567-ca76527c3787.PNG)
 
 Figure 1. The initial conditions model requires the date to be January 20th, 2022, and the previous date to be January 13th, 2022. This step makes predictions for all locations to begin model spin up. 
 
@@ -38,8 +38,8 @@ This ensures that the existing script pulls the most to-date observations and pr
 A complete run provides a visualization of each region’s SWE, mapped and plotted against elevation as exhibited in Figures 2 and 3. 
 The model matches all predictions to the submission_format.csv, and saves all predictions and associated data into the Predictions folder for use as features in future model runs.
 
-<p align="center">!
- [S_Sierras_SWE_elev](https://user-images.githubusercontent.com/33735397/155616021-4ead87e0-3b25-4dd6-987f-ee4fbac85ed1.PNG)
+
+[S_Sierras_SWE_elev](https://user-images.githubusercontent.com/33735397/155616021-4ead87e0-3b25-4dd6-987f-ee4fbac85ed1.PNG)
 
 Figure 2. Model spin-up illustrates each region’s predictions. For example, the high elevation sites in the Southern Sierras region demonstrate the greatest SWE from 2,500 m to 3,100 m.
 
