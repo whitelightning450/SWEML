@@ -31,6 +31,46 @@ Figure 1. The initial conditions model requires the date to be January 20th, 202
 
 
 ## Model Spin-up.
-After the completion of the initial conditions predictions, the Wasatch Snow-ML uses the SWE_Prediction.ipynb script which continues to leverage the current and previous week’s ground measures. This model continues to require all DataDriven groundmeasures.csv files to be named according to their latest release (e.g., ground_measures_features_02_03_2022.csv for February 3rd, 2022). This ensures that the existing script pulls the most to-date observations and processes accordingly. Run this model up to the current period of observation. A complete run provides a visualization of each region’s SWE, mapped and plotted against elevation as exhibited in Figures 2 and 3. The model matches all predictions to the submission_format.csv, and saves all predictions and associated data into the Predictions folder for use as features in future model runs.
+After the completion of the initial conditions predictions, the Wasatch Snow-ML uses the SWE_Prediction.ipynb script which continues to leverage the current and previous week’s ground measures. 
+This model continues to require all DataDriven groundmeasures.csv files to be named according to their latest release (e.g., ground_measures_features_02_03_2022.csv for February 3rd, 2022). 
+This ensures that the existing script pulls the most to-date observations and processes accordingly. Run this model up to the current period of observation.
+A complete run provides a visualization of each region’s SWE, mapped and plotted against elevation as exhibited in Figures 2 and 3. 
+The model matches all predictions to the submission_format.csv, and saves all predictions and associated data into the Predictions folder for use as features in future model runs.
+
+
+![S_Sierras_SWE_elev](https://user-images.githubusercontent.com/33735397/155616021-4ead87e0-3b25-4dd6-987f-ee4fbac85ed1.PNG)
+Figure 2. Model spin-up illustrates each region’s predictions. For example, the high elevation sites in the Southern Sierras region demonstrate the greatest SWE from 2,500 m to 3,100 m.
+
+![S_Sierras_SWE_Map](https://user-images.githubusercontent.com/33735397/155616067-30779c28-3f4a-4b09-a54d-7cbf04e91269.PNG)
+Figure 3. The Wasatch Snow-ML model illustrates each week’s model prediction over the region of interest.
+
+
+## Inference. 
+The model inference is performed the same as model spin, but with the to-date observations loaded in the SWE_Prediction.ipynb script. 
+This model continues to require all DataDriven groundmeasures.csv files to be named according to their latest release (e.g., ground_measures_features_02_10_2022.csv for February 10th, 2022). 
+This ensures that the existing script pulls the most to-date observations and processes accordingly.
+This step ensures all of the previous week’s observations form inputs in the current week’s inference. 
+For example, if making predictions for February 10th, 2022, the date should be  “02_10_2022” and the previous date “02_03_2022”. 
+See Figure 4 for an example. This script loads the to-date ground features data (when saved in the appropriate date format), processes the data into model input feature, and makes predictions. 
+Model predictions are illustrated similarly to Figures 2 and 3.
+The model matches all predictions to the submission_format.csv, and saves all predictions and associated data into the Predictions folder for use as features in the next week’s model run.
+
+![PredictionRun](https://user-images.githubusercontent.com/33735397/155616234-f7cec34d-7166-43f7-bc9e-08c7bbe99595.PNG)
+Figure 4. For a prediction run for February 10th, 2022, the current and previous dates should be entered as illustrated.
+
+
+## Dependencies (versions, environments)
+Python: Version 3.8 or later
+
+### Required packages
+
+| Left-Aligned  | Center Aligned  | Right Aligned |
+| :------------ |:---------------:| -----:|
+| col 3 is      | some wordy text | $1600 |
+| col 2 is      | centered        |   $12 |
+| zebra stripes | are neat        |    $1 |
+
+
+
 
 
