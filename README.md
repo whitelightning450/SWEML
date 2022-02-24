@@ -26,7 +26,7 @@ Below is a high-level overview of the necessary steps, which we go into more det
 
 
 
-(https://user-images.githubusercontent.com/33735397/155603114-d0f56d80-7b1a-4899-a567-ca76527c3787.PNG)
+[InitialRun](https://user-images.githubusercontent.com/33735397/155603114-d0f56d80-7b1a-4899-a567-ca76527c3787.PNG)
 
 Figure 1. The initial conditions model requires the date to be January 20th, 2022, and the previous date to be January 13th, 2022. This step makes predictions for all locations to begin model spin up. 
 
