@@ -37,8 +37,7 @@ This ensures that the existing script pulls the most to-date observations and pr
 A complete run provides a visualization of each region’s SWE, mapped and plotted against elevation as exhibited in Figures 2 and 3. 
 The model matches all predictions to the submission_format.csv, and saves all predictions and associated data into the Predictions folder for use as features in future model runs.
 
-
-![S_Sierras_SWE_elev](https://user-images.githubusercontent.com/33735397/155616021-4ead87e0-3b25-4dd6-987f-ee4fbac85ed1.PNG)
+<p align="center">![S_Sierras_SWE_elev](https://user-images.githubusercontent.com/33735397/155616021-4ead87e0-3b25-4dd6-987f-ee4fbac85ed1.PNG)
 
 Figure 2. Model spin-up illustrates each region’s predictions. For example, the high elevation sites in the Southern Sierras region demonstrate the greatest SWE from 2,500 m to 3,100 m.
 
