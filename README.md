@@ -1,7 +1,5 @@
 # National-ML-Snow-Prediction-Model
-https://img.shields.io/github/license/whitelightning450/National-ML-Snow-Prediction-Mod
-
-https://img.shields.io/badge/left-right-f39f37
+![GitHub](https://img.shields.io/github/license/whitelightning450/National-ML-Snow-Prediction-Mod?logo=GitHub&style=flat-square)
 
 ### Deep Learning national scale 1 km resolution SWE prediction model
 
