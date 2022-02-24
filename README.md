@@ -38,10 +38,7 @@ This ensures that the existing script pulls the most to-date observations and pr
 A complete run provides a visualization of each region’s SWE, mapped and plotted against elevation as exhibited in Figures 2 and 3. 
 The model matches all predictions to the submission_format.csv, and saves all predictions and associated data into the Predictions folder for use as features in future model runs.
 
-
-<center>
 ![S_Sierras_SWE_elev](https://user-images.githubusercontent.com/33735397/155618058-b0a3fd32-fd46-4815-9dc4-badad48cd892.PNG)
-<center>
 
 Figure 2. Model spin-up illustrates each region’s predictions. For example, the high elevation sites in the Southern Sierras region demonstrate the greatest SWE from 2,500 m to 3,100 m.
 
@@ -83,3 +80,99 @@ Python: Version 3.8 or later
 | h5py         | elevation  | cmocean            |
 | mpl_toolkits | hdfdict    | warning            |
 | math         | pickle     |                    |
+
+
+
+## Data Sources (training, inference, where/how used)
+### Model Training Data:
+Training data for the model was obtained through the drivendata.org online Development Stage data download portal: 
+https://www.drivendata.org/competitions/86/competition-reclamation-snow-water-dev/data/
+
+Ground measurements for training were obtained from the provided SNOTEL and CDEC measurement file: ground_measure_features.csv
+
+Latitude, Longitude, and Elevation for all measurement locations were obtained from the metadata file: ground_measures_metadata.csv
+
+GeoJSON data for the submission format grid cell delineation were obtained through the grid_cells.geoJSON file. 
+
+SWE training measurements for the submission format grid cells were obtained through the train_labels.csv
+
+Using the above data, a training dataset was produced for the timespan measured in train_labels.csv. 
+The submission grid cell ids were identified by latitude and longitude into one of the twenty-three sub-regions. SNOTEL and CDEC measurements were also identified by coordinates and grouped by sub-region. 
+Previous SWE and Delta SWE values were derived for each grid cell, and for each ground measurement site, as the previous measured or estimated SWE value at that location, and as the current measure or estimated SWE value - previous measure or estimated SWE value, respectively. 
+Aspect and slope angle from the geoJSON data for each gridcell was converted to northness on a scale of -1 to 1. 
+The training data is compiled in /Data_Processing_Assimilation/Geoprocessing_and_Training/Data_Training.ipynb  into a dictionary format and saved as a .h5 file (/Data/Model_Calibraition_Data/RegionTrain_Final.h5).
+
+### Model Prediction Data
+Weekly SNOTEL and CDEC SWE measurements used for updating model inference throughout the project duration are obtained through the drivendata.org online Evaluation Stage data download portal: 
+https://www.drivendata.org/competitions/90/competition-reclamation-snow-water-eval/data/
+Once downloaded from the data portal, weekly ground measures are saved in /Data/Pre_Processed. 
+The ipynb script, /Data_Processing_Assimilation/Geoprocessing_and_Training/Forecasting_Geoprocessing.ipynb compiles the updated ground measures into a formatted dictionary file for inference, saved within /Data/Processed
+
+## Model instructions: Training
+The Wasatch Snow-ML model calibration scripts are located in the following directory:
+
+Model->Model_Calibration. 
+
+We perform feature selection using recursive feature elimination (RFE) in a tree-based model (light gradient boost model) for both initial conditions(LGBM_Intial_Conditions_Training.ipynb) and thereafter (LGBM_SWE_Training.ipynb) for each of the twenty-three regions, see Figure 5. 
+The identified features demonstrated the greatest prediction accuracy in the deep learning model (multi-layered perceptron, MLP). 
+The identified features for each region, and for initial and post-initial conditions are saved in opt_features_intial.pkl, and in opt_features_final.pkl, respectively.
+
+![Regions](https://user-images.githubusercontent.com/33735397/155618808-ea8f9cc0-180e-4621-a4c5-142a2adf8621.PNG)
+
+Figure 5. The Wasatch Snow-ML model consists of twenty-three subregions (Southern Sierras consist of lower and high elevations) to create regionally-specific model features.
+
+
+Each region’s and prediction conditions (initial or thereafter) deep learning model (MLP) uses the same nine layer-node architecture as illustrated in Table 1, with the exception of layer one (Input) which is based on the total number of regionally-specific input features.
+
+
+| Layer | Layer Number  | Node                |
+|:----: | :-----------: |:------------------: |
+| Input | 1             | # of input features |
+|       | 2             |  128                |
+|       | 3             |  128                |
+|Hidden | 4             |   64                |
+|       | 5             |   64                |
+|       | 6             |   32                |
+|       | 7             |  16                 |
+|       | 8             |  5                  |
+| Output| 9             |  1                  |
+
+Table 1.  The initial conditions and after Wasatch Snow-ML models deep learning structure consists of an input layer determined by the number of ideal region-specific features, and the same layer-node for all hidden layers and output the layer.
+
+
+The model calibration of initial and thereafter conditions uses all of the provided  2013-2017 ground observations (SNOTEL, CDEC) and in-situ observations (1 km lat/long) processed into the “Region_Train_Final.h5” file. 
+This file is the result of assimilating Copernicus 90 m data with the provided “Train Features - Ground Measure”, “Train Label”, and associated metadata from the Data_Training.ipynb file in the Data_Processing_Assimilation-> Geoprocessing_and_Training directory. 
+Running the respective scripts, MLP_Intitial_Conditions_Training.ipynb or MLP_SWE_Training.ipynb, loads the processed training data, performs a 75-25% training-testing split, loads the ideal features, and saves the scaled feature and target values while running 3,000 epochs of batch size 100 and using an adam Optimizer (1e-4). 
+The best model prediction files are saved in their respective folder for later use in prediction. 
+
+We validate model performance on the remaining 25% split using RMSE and the coefficient of determination (R2). While running the calibration script, once each regional model is trained, each regional model makes a prediction on the data not used in training. 
+The prediction includes a model summary and a parity plot along with the respective model’s RMSE and R2, see Figure 6 for an illustration. 
+Upon calibration completion, the training script produces grouped parity plot and barplot to investigate predictive performance, see Figures 7 and 8, respectively. The calibration model saves the best model for each region. 
+
+
+## Model Weights
+
+Model weights for the trained initial conditions MLP model, and for the post-initial conditions MLP model can be found in the following files,  
+
+/Model/Model_Calibration/Initial_MLP/Model_Weights_initial.pkl
+
+/Model/Model_Calibration/Prev_MLP/Model_Weights_final.pkl
+
+The model weights are stored in a .pkl file that contains a dictionary of dictionaries, with the two key structures of, Region, model layer. 
+For example, the key “N_Sierras”, contains 7 keys ( integers 1 through 7) that each corresponds to a numpy array of the model weights for the respective model layer.
+
+
+![ModelTraining](https://user-images.githubusercontent.com/33735397/155620067-f0221bf7-6f9f-4e4e-981c-b571027bebf3.PNG)
+
+Figure 6. The calibration model provides a summary of each region’s model and respective model performance.
+
+
+
+![PerformanceBAr](https://user-images.githubusercontent.com/33735397/155620107-cdbf3cc2-5d8a-405d-9395-2afcc1060a7c.PNG)
+
+Figure 7.  The barplot illustrates each model’s predictive error over the unseen testing data.
+
+
+![Performanceparity](https://user-images.githubusercontent.com/33735397/155620143-70445535-9f70-47fb-a4bf-d312b4dd89cc.PNG)
+
+Figure 8.  A parity plot informs on outliers and regional predictive performance. 
