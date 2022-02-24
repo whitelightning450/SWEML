@@ -39,9 +39,11 @@ The model matches all predictions to the submission_format.csv, and saves all pr
 
 
 ![S_Sierras_SWE_elev](https://user-images.githubusercontent.com/33735397/155616021-4ead87e0-3b25-4dd6-987f-ee4fbac85ed1.PNG)
+
 Figure 2. Model spin-up illustrates each region’s predictions. For example, the high elevation sites in the Southern Sierras region demonstrate the greatest SWE from 2,500 m to 3,100 m.
 
 ![S_Sierras_SWE_Map](https://user-images.githubusercontent.com/33735397/155616067-30779c28-3f4a-4b09-a54d-7cbf04e91269.PNG)
+
 Figure 3. The Wasatch Snow-ML model illustrates each week’s model prediction over the region of interest.
 
 
@@ -56,6 +58,7 @@ Model predictions are illustrated similarly to Figures 2 and 3.
 The model matches all predictions to the submission_format.csv, and saves all predictions and associated data into the Predictions folder for use as features in the next week’s model run.
 
 ![PredictionRun](https://user-images.githubusercontent.com/33735397/155616234-f7cec34d-7166-43f7-bc9e-08c7bbe99595.PNG)
+
 Figure 4. For a prediction run for February 10th, 2022, the current and previous dates should be entered as illustrated.
 
 
@@ -64,13 +67,16 @@ Python: Version 3.8 or later
 
 ### Required packages
 
-| Left-Aligned  | Center Aligned  | Right Aligned |
-| :------------ |:---------------:| -----:|
-| col 3 is      | some wordy text | $1600 |
-| col 2 is      | centered        |   $12 |
-| zebra stripes | are neat        |    $1 |
-
-
-
-
-
+| os           | contextily | pandas             |
+|:-----------: | :--------: | :----------------: | 
+| io           | shapely    | datetime           |
+| re           | rasterio   | matplot.pyplot     |
+| copy         | lightgbm   |  numpy             |
+| time         | tensorflow |  pystac_client     |
+| tables       | platfrom   | planetray_computer |
+| xarray       | tqdm       | random             |
+| rioxarray    | geopandas  | requests           |
+| pyproj       | richdem    | cartopy            |
+| h5py         | elevation  | cmocean            |
+| mpl_toolkits | hdfdict    | warning            |
+| math         | pickle     |                    |
