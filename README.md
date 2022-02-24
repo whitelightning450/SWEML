@@ -1,4 +1,4 @@
-# National-ML-Snow-Prediction-Mod
+## National-ML-Snow-Prediction-Model
 Deep Learning national scale 1 km resolution SWE prediction model
 
 
@@ -15,7 +15,7 @@ This model consists of twenty-three regionally specific sub-models tailored to t
  This readme describes the necessary Python dependencies, training sources, and instructions to get the ML model running for near-real-time SWE inference.
 
 
-Model Running Instructions: Making a Model Inference
+#Model Running Instructions: Making a Model Inference
 
 The Wasatch Snow-ML model requires several steps prior to making an inference. 
 Below is a high-level overview of the necessary steps, which we go into more detail later.
