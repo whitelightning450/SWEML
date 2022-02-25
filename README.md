@@ -189,5 +189,5 @@ Figure 8.  A parity plot informs on outliers and regional predictive performance
 
 
 ## Project support through the University of Alabama and the University of Utah
-![University-of-Alabama-Logo](https://user-images.githubusercontent.com/33735397/155627856-f6c6123f-b50a-4b6d-9c36-618dd9b1ac11.png)
 ![UU](https://user-images.githubusercontent.com/33735397/155627859-a34f7856-22a5-4376-89ca-a59b70f3692e.PNG)
+![UA](https://user-images.githubusercontent.com/33735397/155628209-c4742053-eb29-4d1e-b8e2-c4e354188ca9.PNG)
