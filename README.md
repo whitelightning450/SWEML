@@ -184,3 +184,10 @@ Figure 7.  The barplot illustrates each model’s predictive error over the unse
 ![Performanceparity](https://user-images.githubusercontent.com/33735397/155620143-70445535-9f70-47fb-a4bf-d312b4dd89cc.PNG)
 
 Figure 8.  A parity plot informs on outliers and regional predictive performance. 
+
+
+
+
+## Project support through the University of Alabama and the University of Utah
+![University-of-Alabama-Logo](https://user-images.githubusercontent.com/33735397/155627856-f6c6123f-b50a-4b6d-9c36-618dd9b1ac11.png)
+![UU](https://user-images.githubusercontent.com/33735397/155627859-a34f7856-22a5-4376-89ca-a59b70f3692e.PNG)
