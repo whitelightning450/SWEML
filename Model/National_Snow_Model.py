@@ -31,6 +31,9 @@ from shapely.geometry import Point
 import xarray as xr
 import netCDF4 as nc
 from mpl_toolkits.basemap import Basemap
+from matplotlib.colors import LinearSegmentedColormap
+import warnings
+warnings.filterwarnings("ignore")
 
 
 class SWE_Prediction():
@@ -644,7 +647,7 @@ class SWE_Prediction():
             self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
 
         self.NA_SWE = self.NA_SWE.rename(columns = {self.datecol:'SWE'})
-        #NA_SWE['Date'] = '6-16-2022'
+        
 
         #round to 2 decimals
         self.NA_SWE['Lat'] = round(self.NA_SWE['Lat'],2)
@@ -653,8 +656,8 @@ class SWE_Prediction():
         #NA_SWE = NA_SWE.set_index('Date')
 
         #Get the range of lat/long to put into xarray
-        lonrange = np.arange(min(self.NA_SWE['Long']), max(self.NA_SWE['Long']), 0.01)
-        latrange = np.arange(min(self.NA_SWE['Lat']), max(self.NA_SWE['Lat']), 0.01)
+        lonrange = np.arange(min(self.NA_SWE['Long'])-1, max(self.NA_SWE['Long'])+2, 0.01)
+        latrange = np.arange(min(self.NA_SWE['Lat'])-1, max(self.NA_SWE['Lat']), 0.01)
 
         lonrange = [round(num, 2) for num in lonrange]
         latrange = [round(num, 2) for num in latrange]
@@ -668,6 +671,9 @@ class SWE_Prediction():
 
         #drop duplicate lat/long
         self.DFG = self.DFG.drop_duplicates(subset = ['Long', 'Lat'], keep = 'last').reset_index(drop = True)
+        
+        #fill NaN values with 0
+        self.DFG['SWE'] = self.DFG['SWE'].fillna(0)
 
         #Reshape DFG DF
         target_variable_2D = self.DFG['SWE'].values.reshape((len(latrange),len(lonrange)))
@@ -687,14 +693,34 @@ class SWE_Prediction():
         
         
     def plot_netCDF(self):
+        
+        #set up colormap that is transparent for zero values
+        # get colormap
+        ncolors = 256
+        color_array = plt.get_cmap('viridis')(range(ncolors))
+
+        # change alpha values
+        color_array[:,-1] = np.linspace(0.0,1.0,ncolors)
+
+        # create a colormap object
+        map_object = LinearSegmentedColormap.from_list(name='viridis_alpha',colors=color_array)
+
+        # register this new colormap with matplotlib
+        plt.register_cmap(cmap=map_object)
+
+        
+        
+        
+        #load file
         fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+ self.datecol+'.nc'
         SWE = nc.Dataset(fn)
 
-
+        #Get area of interest
         lats = SWE.variables['lat'][:]
         lons = SWE.variables['lon'][:]
         swe = SWE.variables['SWE'][:]
 
+        #get basemap
         plt.figure(figsize=(20,10))
         map = Basemap(projection='merc',llcrnrlon=-130.,llcrnrlat=30,urcrnrlon=-100,urcrnrlat=50.,resolution='i')
 
@@ -704,9 +730,10 @@ class SWE_Prediction():
         map.drawlsmask(land_color='Linen', ocean_color='#CCFFFF') # can use HTML names or codes for colors
         map.drawcounties()
 
+        #put lat / long into appropriate projection grid
         lons, lats = np.meshgrid(lons, lats)
         x,y = map(lons, lats)
-        map.pcolor(x, y,swe, cmap=plt.cm.jet)
+        map.pcolor(x, y,swe, cmap= map_object)
         plt.colorbar()
 
 
