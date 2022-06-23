@@ -32,6 +32,12 @@ import xarray as xr
 import netCDF4 as nc
 from mpl_toolkits.basemap import Basemap
 from matplotlib.colors import LinearSegmentedColormap
+import folium
+from folium import plugins
+import branca.colormap as cm
+import rioxarray as rxr
+import earthpy as et
+import earthpy.spatial as es
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -636,7 +642,7 @@ class SWE_Prediction():
         full_grid = full_grid.reset_index(drop=True)
         return full_grid
     
-    def netCDF(self):
+    def netCDF(self, plot):
 
         #get all SWE regions data into one DF
 
@@ -656,15 +662,15 @@ class SWE_Prediction():
         #NA_SWE = NA_SWE.set_index('Date')
 
         #Get the range of lat/long to put into xarray
-        lonrange = np.arange(min(self.NA_SWE['Long'])-1, max(self.NA_SWE['Long'])+2, 0.01)
-        latrange = np.arange(min(self.NA_SWE['Lat'])-1, max(self.NA_SWE['Lat']), 0.01)
+        self.lonrange = np.arange(min(self.NA_SWE['Long'])-1, max(self.NA_SWE['Long'])+2, 0.01)
+        self.latrange = np.arange(min(self.NA_SWE['Lat'])-1, max(self.NA_SWE['Lat']), 0.01)
 
-        lonrange = [round(num, 2) for num in lonrange]
-        latrange = [round(num, 2) for num in latrange]
+        self.lonrange = [round(num, 2) for num in self.lonrange]
+        self.latrange = [round(num, 2) for num in self.latrange]
 
 
         #Make grid of lat long
-        FG = self.expand_grid(latrange, lonrange)
+        FG = self.expand_grid(self.latrange, self.lonrange)
 
         #Merge SWE predictions with gridded df
         self.DFG = pd.merge(FG, self.NA_SWE, on = ['Long','Lat'], how = 'left')
@@ -676,10 +682,10 @@ class SWE_Prediction():
         self.DFG['SWE'] = self.DFG['SWE'].fillna(0)
 
         #Reshape DFG DF
-        target_variable_2D = self.DFG['SWE'].values.reshape((len(latrange),len(lonrange)))
+        target_variable_2D = self.DFG['SWE'].values.reshape((len(self.latrange),len(self.lonrange)))
 
         #put into xarray formate
-        target_variable_xr = xr.DataArray(target_variable_2D, coords=[('lat', latrange),('lon', lonrange)])
+        target_variable_xr = xr.DataArray(target_variable_2D, coords=[('lat', self.latrange),('lon', self.lonrange)])
 
         #set target variable name
         target_variable_xr = target_variable_xr.rename("SWE")
@@ -688,8 +694,11 @@ class SWE_Prediction():
         target_variable_xr.to_netcdf(self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+self.datecol+'.nc')
         
         #show plot
-        print('File conversion to netcdf complete, plotting results')
-        self.plot_netCDF()
+        print('File conversion to netcdf complete')
+        
+        if plot == True:
+            print('Plotting results')
+            self.plot_netCDF()
         
         
     def plot_netCDF(self):
@@ -735,6 +744,82 @@ class SWE_Prediction():
         x,y = map(lons, lats)
         map.pcolor(x, y,swe, cmap= map_object)
         plt.colorbar()
+        
+        
+     #produce an interactive plot using Folium
+    def plot_interactive(self):
+        
+        #set up colormap that is transparent for zero values
+        # get colormap
+        ncolors = 256
+        color_array = plt.get_cmap('viridis')(range(ncolors))
+
+        # change alpha values
+        color_array[:,-1] = np.linspace(0.0,1.0,ncolors)
+
+        # create a colormap object
+        map_object = LinearSegmentedColormap.from_list(name='viridis_alpha',colors=color_array)
+
+        # register this new colormap with matplotlib
+        plt.register_cmap(cmap=map_object)
+        
+        
+        #load file
+        fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+ self.datecol+'.nc'
+        
+        #open netcdf file with rioxarray
+        xr = rxr.open_rasterio(fn)
+
+        xr.rio.write_crs("epsg:4326", inplace=True)
+
+        #replace x and y numbers with coordinate rangres
+        xr.coords['x'] = self.lonrange
+        xr.coords['y'] = self.latrange
+
+        # Create a variable for destination coordinate system 
+        dst_crs = 'EPSG:4326' 
+
+
+        # Replace all null values with the minimum value in the array
+        xr = xr.where(~xr.isnull(), xr.min())
+
+        #scale the array from 0 - 255
+        scaled_xr = es.bytescale(xr.values[0])
+        
+        #set max for color map
+        maxSWE = xr.values[0].max()
+        #set color range for color map
+        SWErange = np.arange(0,maxSWE+1, maxSWE/5).tolist()
+
+        m = folium.Map(location=[43.1844, -109.6540],
+               tiles = 'Stamen Terrain', zoom_start = 9)
+
+        map_bounds = [[min(self.NA_SWE['Lat'])-1, min(self.NA_SWE['Long'])-1], 
+                      [max(self.NA_SWE['Lat'])-1, max(self.NA_SWE['Long'])+2, 0.01]]
+
+        rasterlayer = folium.FeatureGroup(name = 'SWE')
+
+        rasterlayer.add_child(folium.raster_layers.ImageOverlay(
+                                image=scaled_xr,
+                                bounds=map_bounds,
+                                interactive=True,
+                                cross_origin=False,
+                                zindex=1,
+                                colormap=map_object,
+                                opacity=1
+                                    ))
+        
+        #add colorbar
+        colormap = cm.LinearColormap(colors=['violet', 'darkblue', 'blue', 'cyan', 'green', 'yellow'],
+                                     index=SWErange, vmin=0.1, vmax=xr.values[0].max(),
+                                     caption='Snow Water Equivalent (SWE) in inches')
+
+        m.add_child(rasterlayer)
+        m.add_child(folium.LayerControl())
+        m.add_child(colormap)
+        display(m)
+      
+
 
 
 
