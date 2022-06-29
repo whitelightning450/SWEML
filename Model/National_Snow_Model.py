@@ -1,6 +1,6 @@
 #Wasatch snow model
 #Author: Ryan C. Johnson
-#Date: 2022-3-09
+#Date: 2022-6-29
 #This script assimilates SNOTEL observations, processes the data into a model friendly
 #format, then uses a calibrated multi-layered perceptron network to make 1 km x 1 km
 #CONUS scale SWE estimates. 
@@ -42,6 +42,15 @@ import datetime as dt
 from netCDF4 import date2num,num2date
 from osgeo import osr
 import warnings
+from pyproj import CRS
+import requests
+import geojson
+import pandas as pd
+from multiprocessing import Pool, cpu_count
+from shapely.ops import unary_union
+import json
+import geopandas as gpd, fiona, fiona.crs
+import webbrowser
 warnings.filterwarnings("ignore")
 
 
@@ -51,6 +60,20 @@ class SWE_Prediction():
         self.date = date
         self.prevdate = prevdate
         self.cwd = cwd
+        
+         #make other date tags
+        m = self.date[0:2]
+        d = self.date[3:5]
+        y = self.date[-4:]
+
+        pm = self.prevdate[0:2]
+        p = self.prevdate[3:5]
+        py = self.prevdate[-4:]
+
+        self.datekey = m[1]+'/'+d+'/'+y
+        self.datecol = y+'-'+m+'-'+d
+        self.prevcol = py+'-'+pm+'-'+p
+        
         #Define Model Regions
         self.Region_list = ['N_Sierras',
                        'S_Sierras_High',
@@ -261,20 +284,8 @@ class SWE_Prediction():
                 
                 
     #Data Assimilation script, takes date and processes to run model.            
-    def Data_Assimilation(self):
-        #make other date tags
-        m = self.date[0:2]
-        d = self.date[3:5]
-        y = self.date[-4:]
-
-        pm = self.prevdate[0:2]
-        p = self.prevdate[3:5]
-        py = self.prevdate[-4:]
-
-        self.datekey = m[1]+'/'+d+'/'+y
-        self.datecol = y+'-'+m+'-'+d
-        self.prevcol = py+'-'+pm+'-'+p
-        
+    def Data_Processing(self):
+          
 
         #load ground truth values (SNOTEL): Testing
         obs_path = self.cwd+'/Data/Pre_Processed/ground_measures_features_' + self.date + '.csv'
@@ -803,7 +814,112 @@ class SWE_Prediction():
         if plot == True:
             print('Plotting results')
             self.plot_netCDF()
+            
+            
+            
+            
+    def netCDF_CONUS(self, plot):
+
+        #get all SWE regions data into one DF
+
+        self.NA_SWE = pd.DataFrame()
+        columns = ['Long', 'Lat', 'elevation_m', 'northness', self.datecol]
+
+        for region in self.Forecast:
+            self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
+
+        self.NA_SWE = self.NA_SWE.rename(columns = {self.datecol:'SWE'})
         
+
+        #round to 2 decimals
+        self.NA_SWE['Lat'] = round(self.NA_SWE['Lat'],2)
+        self.NA_SWE['Long'] = round(self.NA_SWE['Long'],2)
+
+        #NA_SWE = NA_SWE.set_index('Date')
+
+        #Get the range of lat/long to put into xarray
+        self.lonrange = np.arange(-124.75, -66.95, 0.01)
+        self.latrange = np.arange(25.52, 49.39, 0.01)
+
+        self.lonrange = [round(num, 2) for num in self.lonrange]
+        self.latrange = [round(num, 2) for num in self.latrange]
+
+         #Make grid of lat long
+        FG = self.expand_grid(self.latrange, self.lonrange)
+
+        #Merge SWE predictions with gridded df
+        self.DFG = pd.merge(FG, self.NA_SWE, on = ['Long','Lat'], how = 'left')
+
+        #drop duplicate lat/long
+        self.DFG = self.DFG.drop_duplicates(subset = ['Long', 'Lat'], keep = 'last').reset_index(drop = True)
+        
+        #fill NaN values with 0
+        self.DFG['SWE'] = self.DFG['SWE'].fillna(0)
+
+        #Reshape DFG DF
+        self.SWE_array = self.DFG['SWE'].values.reshape(1,len(self.latrange),len(self.lonrange))
+
+       # create nc filepath
+        fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+self.datecol+'_CONUS.nc'
+        
+        # make nc file, set lat/long, time
+        ds = nc.Dataset(fn, 'w', format = 'NETCDF4')
+        lat = ds.createDimension('lat', len(self.latrange))
+        lon = ds.createDimension('lon', len(self.lonrange)) 
+        time = ds.createDimension('time', None)
+        
+        #make nc file metadata
+        ds.title = 'SWE interpolation for ' + self.datecol
+
+        lat = ds.createVariable('lat', np.float32, ('lat',))
+        lat.units = 'degrees_north'
+        lat.long_name = 'latitude'
+
+        lon = ds.createVariable('lon', np.float32, ('lon',))
+        lon.units = 'degrees_east'
+        lon.long_name = 'longitude'
+
+        time = ds.createVariable('time', np.float64, ('time',))
+        time.units = 'hours since 1800-01-01'
+        time.long_name = 'time'
+
+        SWE = ds.createVariable('SWE', np.float64, ('time', 'lat', 'lon',))
+        SWE.units = 'inches'
+        SWE.standard_name = 'snow_water_equivalent'
+        SWE.long_name = 'Interpolated SWE product @1-km'
+
+        #add projection information
+        proj = osr.SpatialReference()
+        proj.ImportFromEPSG(4326) # GCS_WGS_1984
+        SWE.esri_pe_string = proj.ExportToWkt()
+
+        #set lat lon info in file
+        SWE.coordinates = 'lon lat'
+        
+
+        # Write latitudes, longitudes.
+        lat[:] = self.latrange
+        lon[:] = self.lonrange
+
+        # Write the data.  This writes the whole 3D netCDF variable all at once.
+        SWE[:,:,:] = self.SWE_array 
+        
+        #Set date/time information
+        times_arr = time[:]
+        dates = [dt.datetime(int(self.datecol[0:4]),int(self.datecol[5:7]),int(self.datecol[8:]),0)]
+        times = date2num(dates, time.units)
+        time[:] = times
+        
+        print(ds)
+        ds.close()
+        print('File conversion to netcdf complete')
+        
+        if plot == True:
+            print('Plotting results')
+            self.plot_netCDF()
+
+        
+           
         
     def plot_netCDF(self):
         
@@ -851,7 +967,7 @@ class SWE_Prediction():
         
         
      #produce an interactive plot using Folium
-    def plot_interactive(self):
+    def plot_interactive(self, pinlat, pinlong, web):
         
         #set up colormap that is transparent for zero values
         # get colormap
@@ -869,7 +985,7 @@ class SWE_Prediction():
         
         
         #load file
-        fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+ self.datecol+'.nc'
+        fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+ self.datecol+'_CONUS.nc'
         
         #open netcdf file with rioxarray
         xr = rxr.open_rasterio(fn)
@@ -891,11 +1007,12 @@ class SWE_Prediction():
         #set color range for color map
         SWErange = np.arange(0,maxSWE+1, maxSWE/5).tolist()
 
-        m = folium.Map(location=[43.1844, -109.6540],
-               tiles = 'Stamen Terrain', zoom_start = 9)
+        m = folium.Map(location=[pinlat, pinlong],
+               tiles = 'Stamen Terrain', zoom_start = 9, control_scale=True)
 
-        map_bounds = [[min(self.NA_SWE['Lat'])-1, min(self.NA_SWE['Long'])-1], 
-                      [max(self.NA_SWE['Lat'])-1, max(self.NA_SWE['Long'])+2, 0.01]]
+        #map bounds, must be minutally adjusted for correct lat/long placement
+        map_bounds = [[min(self.latrange)-0.86, min(self.lonrange)], 
+                      [max(self.latrange)-0.86, max(self.lonrange), 0.01]]
 
         rasterlayer = folium.FeatureGroup(name = 'SWE')
 
@@ -917,10 +1034,92 @@ class SWE_Prediction():
         m.add_child(rasterlayer)
         m.add_child(folium.LayerControl())
         m.add_child(colormap)
-        display(m)
+        
+        #code for webbrowser app
+        if web == True:
+            output_file =  self.cwd +'/Data/NetCDF/SWE_'+self.datecol+'.html'
+            m.save(output_file)
+            webbrowser.open(output_file, new=2)
+            
+        else:
+            display(m)
+            
         xr.close()
       
 
+     #produce an interactive plot using Folium
+    def plot_interactive_SWE(self, pinlat, pinlong, web):
+        fnConus = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+self.datecol+'_CONUS.nc'
 
+        #xr = rxr.open_rasterio(fn)
+        xrConus = rxr.open_rasterio(fnConus)
+        
+        #Convert rxr df to geodataframe
+        x, y, elevation = xrConus.x.values, xrConus.y.values, xrConus.values
+        x, y = np.meshgrid(x, y)
+        x, y, elevation = x.flatten(), y.flatten(), elevation.flatten()
 
+        print("Converting to GeoDataFrame...")
+        SWE_pd = pd.DataFrame.from_dict({'SWE': elevation, 'x': x, 'y': y})
+        SWE_threshold = 0.1
+        SWE_pd = SWE_pd[SWE_pd['SWE'] > SWE_threshold]
+        SWE_gdf = gpd.GeoDataFrame(
+            SWE_pd, geometry=gpd.points_from_xy(SWE_pd.x, SWE_pd.y), crs=4326)
+
+        SWE_gdf.geometry = SWE_gdf.geometry.buffer(0.01, cap_style=3)
+        SWE_gdf.geometry = SWE_gdf.geometry.to_crs(epsg= 4326)
+
+        SWE_gdf =  SWE_gdf.reset_index(drop = True)
+        SWE_gdf['geoid'] = SWE_gdf.index.astype(str)
+        Chorocols = ['geoid', 'SWE', 'geometry']
+        SWE_gdf = SWE_gdf[Chorocols]
+        SWE_gdf.crs = CRS.from_epsg(4326)
+
+        print('File conversion complete, creating mapping instance')
+        # Create a Map instance
+        m = folium.Map(location=[pinlat, pinlong], tiles = 'Stamen Terrain', zoom_start=10, 
+                       control_scale=True)
+
+        # Plot a choropleth map
+        # Notice: 'geoid' column that we created earlier needs to be assigned always as the first column
+        folium.Choropleth(
+            geo_data=SWE_gdf,
+            name='SWE estimates',
+            data=SWE_gdf,
+            columns=['geoid', 'SWE'],
+            key_on='feature.id',
+            fill_color='YlGnBu_r',
+            fill_opacity=0.7,
+            line_opacity=0.2,
+            line_color='white', 
+            line_weight=0,
+            highlight=False, 
+            smooth_factor=1.0,
+            #threshold_scale=[100, 250, 500, 1000, 2000],
+            legend_name= 'SWE in inches for '+ self.datecol).add_to(m)
+
+        # Convert points to GeoJson
+        folium.features.GeoJson(SWE_gdf,  
+                                name='Snow Water Equivalent',
+                                style_function=lambda x: {'color':'transparent','fillColor':'transparent','weight':0},
+                                tooltip=folium.features.GeoJsonTooltip(fields=['SWE'],
+                                                                        aliases = ['Snow Water Equivalent (in) for '+ self.datecol+ ':'],
+                                                                        labels=True,
+                                                                        sticky=True,
+                                                                         localize=True
+                                                                                    )
+                               ).add_to(m)
+
+        
+         #code for webbrowser app
+        if web == True:
+            output_file =  self.cwd +'/Data/NetCDF/SWE_'+self.datecol+'_Interactive.html'
+            m.save(output_file)
+            webbrowser.open(output_file, new=2)
+
+        else:
+            display(m)
+            
+        xrConus.close()
+        
 
