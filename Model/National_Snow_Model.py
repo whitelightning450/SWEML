@@ -1,6 +1,6 @@
 #Wasatch snow model
 #Author: Ryan C. Johnson
-#Date: 2022-3-09
+#Date: 2022-6-29
 #This script assimilates SNOTEL observations, processes the data into a model friendly
 #format, then uses a calibrated multi-layered perceptron network to make 1 km x 1 km
 #CONUS scale SWE estimates. 
