@@ -87,9 +87,11 @@ Python: Version 3.8 or later
 | pyproj       | richdem    | cartopy            |
 | h5py         | elevation  | cmocean            |
 | mpl_toolkits | hdfdict    | warning            |
-| math         | pickle     |                    |
-
-
+| math         | pickle     |  contextily        |
+|folium        | branca     |  earthpy           | 
+|netCDF4       | osgeo      | requests           |
+| warnings     | geojson    | fiona              |
+|fiona.crs     |webbrowser  |                    |
 
 ## Data Sources (training, inference, where/how used)
 ### Model Training Data:
