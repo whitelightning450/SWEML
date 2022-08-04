@@ -24,13 +24,13 @@ from tensorflow.keras import layers
 from tensorflow.keras.models import load_model
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Activation, Dropout
-import contextily as cx
+#import contextily as cx
 import rasterio
 import geopandas as gpd
 from shapely.geometry import Point
 import xarray as xr
 import netCDF4 as nc
-from mpl_toolkits.basemap import Basemap
+#from mpl_toolkits.basemap import Basemap
 from matplotlib.colors import LinearSegmentedColormap
 import folium
 from folium import plugins
@@ -41,7 +41,7 @@ import earthpy.spatial as es
 import datetime as dt
 from netCDF4 import date2num,num2date
 from osgeo import osr
-import warnings
+#import warningspip
 from pyproj import CRS
 import requests
 import geojson
@@ -51,28 +51,44 @@ from shapely.ops import unary_union
 import json
 import geopandas as gpd, fiona, fiona.crs
 import webbrowser
+import warnings
+
+
+#import contextily as ctx
+import ulmo
+from datetime import timedelta
+
+
+
+
 warnings.filterwarnings("ignore")
 
 
 class SWE_Prediction():
-    def __init__(self, cwd, date, prevdate):
+    def __init__(self,cwd, date):
         self = self
         self.date = date
-        self.prevdate = prevdate
+        self.prevdate = pd.to_datetime(date)-timedelta(days=7)
+        self.prevdate = self.prevdate.strftime('%Y-%m-%d')
+        
+        
+        #set path directory
         self.cwd = cwd
         
+
          #make other date tags
-        m = self.date[0:2]
-        d = self.date[3:5]
-        y = self.date[-4:]
+      #  self.datestr = self.date.strftime.strftime('%Y-%m-%d')
+       # m = datestr[5:7]
+        #d = datestr[-2:]
+        #y = datestr[:4]
 
-        pm = self.prevdate[0:2]
-        p = self.prevdate[3:5]
-        py = self.prevdate[-4:]
+        #pm = self.prevdate[0:2]
+        #p = self.prevdate[3:5]
+        #py = self.prevdate[-4:]
 
-        self.datekey = m[1]+'/'+d+'/'+y
-        self.datecol = y+'-'+m+'-'+d
-        self.prevcol = py+'-'+pm+'-'+p
+        #self.datekey = m[1]+'/'+d+'/'+y
+        #self.date = y+'-'+m+'-'+d
+        #self.prevcol = py+'-'+pm+'-'+p
         
         #Define Model Regions
         self.Region_list = ['N_Sierras',
@@ -283,12 +299,162 @@ class SWE_Prediction():
                 
                 
                 
+                
+                
+                
+    def get_SNOTEL(self, sitecode, start_date, end_date):
+      #  print(sitecode)
+
+        #This is the latest CUAHSI API endpoint
+        wsdlurl = 'https://hydroportal.cuahsi.org/Snotel/cuahsi_1_1.asmx?WSDL'
+
+        #Daily SWE
+        variablecode = 'SNOTEL:WTEQ_D'
+
+        values_df = None
+        try:
+            #Request data from the server
+            site_values = ulmo.cuahsi.wof.get_values(wsdlurl, sitecode, variablecode, start=start_date, end=end_date)
+
+            end_date=end_date.strftime('%Y-%m-%d')
+            #Convert to a Pandas DataFrame   
+            SNOTEL_SWE = pd.DataFrame.from_dict(site_values['values'])
+            #Parse the datetime values to Pandas Timestamp objects
+            SNOTEL_SWE['datetime'] = pd.to_datetime(SNOTEL_SWE['datetime'], utc=True)
+            #Set the DataFrame index to the Timestamps
+            SNOTEL_SWE = SNOTEL_SWE.set_index('datetime')
+            #Convert values to float and replace -9999 nodata values with NaN
+            SNOTEL_SWE['value'] = pd.to_numeric(SNOTEL_SWE['value']).replace(-9999, np.nan)
+            #Remove any records flagged with lower quality
+            SNOTEL_SWE = SNOTEL_SWE[SNOTEL_SWE['quality_control_level_code'] == '1']
+
+            SNOTEL_SWE['station_id'] = sitecode
+            SNOTEL_SWE.index = SNOTEL_SWE.station_id
+            SNOTEL_SWE = SNOTEL_SWE.rename(columns = {'value':end_date})
+            col = [end_date]
+            SNOTEL_SWE = SNOTEL_SWE[col].iloc[-1:]
+
+
+        except:
+            print('Unable to fetch SWE data for site ', sitecode, 'SWE value: -9999')
+            end_date=end_date.strftime('%Y-%m-%d')
+            SNOTEL_SWE = pd.DataFrame(-9999, columns = ['station_id', end_date], index =[1])
+            SNOTEL_SWE['station_id'] = sitecode
+            SNOTEL_SWE = SNOTEL_SWE.set_index('station_id')
+
+
+        return SNOTEL_SWE
+
+
+
+
+
+
+    def get_CDEC(self, station_id, sensor_id, resolution, start_date, end_date ):
+
+        try:
+            url = 'https://cdec.water.ca.gov/dynamicapp/selectQuery?Stations=%s' % (station_id)+'&SensorNums=%s' % (sensor_id)+'&dur_code=%s'% (resolution) +'&Start=%s' % (start_date) + '&End=%s' %(end_date) 
+            CDEC_SWE = pd.read_html(url)[0]
+            CDEC_SWE['station_id'] = 'CDEC:'+station_id
+            CDEC_SWE = CDEC_SWE.set_index('station_id')
+            CDEC_SWE = pd.DataFrame(CDEC_SWE.iloc[-1]).T
+            col = ['SNOW WC INCHES']
+            CDEC_SWE = CDEC_SWE[col]
+            CDEC_SWE=CDEC_SWE.rename(columns = {'SNOW WC INCHES':end_date})
+
+        except:
+            print('Unable to fetch SWE data for site ', station_id, 'SWE value: -9999')
+            CDEC_SWE = pd.DataFrame(-9999, columns = ['station_id', end_date], index =[1])
+            CDEC_SWE['station_id'] = 'CDEC:'+station_id
+            CDEC_SWE = CDEC_SWE.set_index('station_id')
+
+
+
+        return CDEC_SWE
+    
+    
+    
+    def Data_Assimilation(self):
+        GM_template = pd.read_csv(self.cwd+'/Data/Pre_Processed_DA/ground_measures_features_template.csv')
+        GM_template = GM_template.rename(columns = {'Unnamed: 0': 'station_id'})
+        GM_template.index =GM_template['station_id']
+        cols = ['Date']
+        GM_template =GM_template[cols]
+
+
+        #Get all records, can filter later,
+        self.CDECsites = list(GM_template.index)
+        self.CDECsites = list(filter(lambda x: 'CDEC' in x, self.CDECsites))
+        self.CDECsites = [x[-3:] for x in self.CDECsites]
+        
+        date = pd.to_datetime(self.date)
+
+        start_date = date-timedelta(days = 1)
+        start_date = start_date.strftime('%Y-%m-%d')
+
+        resolution = 'D'
+        sensor_id='3'
+
+        SWE_df = pd.DataFrame(columns = ['station_id', date.strftime('%Y-%m-%d')], index =[1])
+        SWE_df = SWE_df.set_index('station_id')
+
+        print('Getting California Data Exchange Center SWE data from sites: ')
+        for site in self.CDECsites:
+            print(site)
+            CDEC = self.get_CDEC(site, sensor_id, resolution, start_date, date.strftime('%Y-%m-%d') )
+            frames = [SWE_df, CDEC]
+            SWE_df = pd.concat(frames)
+
+    #    cols = [date]
+     #   SWE_df = SWE_df[cols]
+
+
+
+        self.Snotelsites = list(GM_template.index)
+        self.Snotelsites = list(filter(lambda x: 'SNOTEL' in x, self.Snotelsites))
+
+
+        print('Getting NRCS SNOTEL SWE data from sites: ')
+        for site in self.Snotelsites:
+            print(site)
+            Snotel = self.get_SNOTEL(site, start_date, date)
+            frames = [SWE_df, Snotel]
+            SWE_df = pd.concat(frames)
+
+
+        #SWE_df = SWE_df[cols]
+        SWE_df = SWE_df.iloc[1:]
+        date = date.strftime('%Y-%m-%d')
+
+        #SWE_df= SWE_df[~SWE_df.index.duplicated(keep = 'first')]
+
+
+        SWE_df[date] = SWE_df[date].replace(['--'], -9999)
+
+        SWE_df[date] = SWE_df[date].astype(float)
+
+
+        NegSWE = SWE_df[SWE_df[date].between(-10,-.1)].copy()
+        NegSWE[date] =0
+
+
+        SWE_df.update(NegSWE)
+
+        #SWE_df = SWE_df.rename(columns = {'Unnamed: 0': 'station_id'})
+        #SWE_df = SWE_df.set_index('station_id')
+
+        SWE_df.to_csv(self.cwd+'\Data\Pre_Processed_DA\ground_measures_features_'+date+'.csv')
+
+                
+                
+                
+                
     #Data Assimilation script, takes date and processes to run model.            
     def Data_Processing(self):
           
 
         #load ground truth values (SNOTEL): Testing
-        obs_path = self.cwd+'/Data/Pre_Processed/ground_measures_features_' + self.date + '.csv'
+        obs_path = self.cwd+'/Data/Pre_Processed_DA/ground_measures_features_' + self.date + '.csv'
         self.GM_Test = pd.read_csv(obs_path)
 
         #load ground truth values (SNOTEL): previous week, these have Na values filled by prev weeks obs +/- mean region Delta SWE
@@ -308,9 +474,9 @@ class SWE_Prediction():
 
         self.prev_SWE= {}
         for region in self.Region_list:
-            self.prev_SWE[region] = pd.read_hdf(self.cwd+'/Predictions/predictions'+ self.prevcol+'.h5', region)  #this was
-            self.prev_SWE[region] = pd.DataFrame(self.prev_SWE[region][self.prevcol])
-            self.prev_SWE[region] = self.prev_SWE[region].rename(columns = {self.prevcol: 'prev_SWE'})
+            self.prev_SWE[region] = pd.read_hdf(self.cwd+'/Predictions/predictions'+ self.prevdate+'.h5', region)  #this was
+            self.prev_SWE[region] = pd.DataFrame(self.prev_SWE[region][self.prevdate])
+            self.prev_SWE[region] = self.prev_SWE[region].rename(columns = {self.prevdate: 'prev_SWE'})
 
         #change first column to station id
         self.GM_Test = self.GM_Test.rename(columns = {'Unnamed: 0':'station_id'})
@@ -318,7 +484,7 @@ class SWE_Prediction():
 
 
         #Fill NA observations
-        self.GM_Test[self.datekey] = self.GM_Test[self.datekey].fillna(-9999)
+        #self.GM_Test[self.date] = self.GM_Test[self.date].fillna(-9999)
 
         #drop na and put into modeling df format
         self.GM_Test = self.GM_Test.melt(id_vars=["station_id"]).dropna()
@@ -517,9 +683,9 @@ class SWE_Prediction():
 
 
     #Take in and make prediction
-    def SWE_Predict(self, plot):
+    def SWE_Predict(self):
         
-        self.plot = plot
+        #self.plot = plot
         #load first SWE observation forecasting dataset with prev and delta swe for observations. 
         path = self.cwd+'/Data/Processed/ValidationDF_'+self.date + '.pkl'
 
@@ -543,32 +709,32 @@ class SWE_Prediction():
         #Make and save predictions for each reagion
         self.Prev_df = pd.DataFrame()
         self.predictions ={}
-        print ('Making predictions for: ', self.datecol)
+        print ('Making predictions for: ', self.date)
 
         for Region in self.Region_list:
             print(Region)
             self.predictions[Region] = self.Predict(Region)
             self.predictions[Region] = pd.DataFrame(self.predictions[Region])
             
-            if self.plot == True:
-                del self.predictions[Region]['geometry']
-            self.Prev_df = self.Prev_df.append(pd.DataFrame(self.predictions[Region][self.datecol]))
+          #  if self.plot == True:
+           #     del self.predictions[Region]['geometry']
+            self.Prev_df = self.Prev_df.append(pd.DataFrame(self.predictions[Region][self.date]))
             self.Prev_df = pd.DataFrame(self.Prev_df)
 
-            self.predictions[Region].to_hdf(self.cwd+'/Predictions/predictions'+self.datecol+'.h5', key = Region)
+            self.predictions[Region].to_hdf(self.cwd+'/Predictions/predictions'+self.date+'.h5', key = Region)
 
 
         #load submission DF and add predictions
-        self.subdf = pd.read_csv(self.cwd+'/Predictions/submission_format_'+self.prevcol+'.csv')
+        self.subdf = pd.read_csv(self.cwd+'/Predictions/submission_format_'+self.prevdate+'.csv')
         self.subdf.index = list(self.subdf.iloc[:,0].values)
         self.subdf = self.subdf.iloc[:,1:]
 
         self.sub_index = self.subdf.index
         #reindex predictions
         self.Prev_df = self.Prev_df.loc[self.sub_index]
-        self.subdf[self.datecol] = self.Prev_df[self.datecol].astype(float)
+        self.subdf[self.date] = self.Prev_df[self.date].astype(float)
         #subdf.index.names = [' ']
-        self.subdf.to_csv(self.cwd+'/Predictions/submission_format_'+self.datecol+'.csv')
+        self.subdf.to_csv(self.cwd+'/Predictions/submission_format_'+self.date+'.csv')
 
         
             #set up model prediction function
@@ -612,34 +778,34 @@ class SWE_Prediction():
 
         y_forecast[y_forecast < 0 ] = 0
         y_forecast = (SWEmax * y_forecast)
-        self.Forecast[Region][self.datecol] = y_forecast
+        self.Forecast[Region][self.date] = y_forecast
          
 
-        if self.plot == True:
-            #plot predictions    
-            plt.scatter( self.Forecast[Region]['elevation_m'],self.Forecast[Region][self.datecol], s=5, color="blue", label="Predictions")
-            plt.xlabel('elevation m')
-            plt.ylabel('Predicted SWE')
-            plt.legend()
+#        if self.plot == True:
+#            #plot predictions    
+#            plt.scatter( self.Forecast[Region]['elevation_m'],self.Forecast[Region][self.date], s=5, color="blue", label="Predictions")
+#            plt.xlabel('elevation m')
+#            plt.ylabel('Predicted SWE')
+#            plt.legend()
 
 
             #plt.plot(x_ax, y_pred, lw=0.8, color="red", label="predicted")
-            plt.title(Region)
-            plt.show()
+#            plt.title(Region)
+#            plt.show()
 
 
             #plot geolocation information
-            _geom = [Point(xy) for xy in zip(self.Forecast[Region]['Long'], self.Forecast[Region]['Lat'])]
-            _geom_df = gpd.GeoDataFrame(self.Forecast[Region], crs="EPSG:4326", geometry=_geom)
+#            _geom = [Point(xy) for xy in zip(self.Forecast[Region]['Long'], self.Forecast[Region]['Lat'])]
+#            _geom_df = gpd.GeoDataFrame(self.Forecast[Region], crs="EPSG:4326", geometry=_geom)
 
-            dfmax = max(self.Forecast[Region][self.datecol])*1.05
+ #           dfmax = max(self.Forecast[Region][self.date])*1.05
 
             # fig, ax = plt.subplots(figsize=(14,6))
-            ax = _geom_df.plot(self.datecol, cmap="cool", markersize=30,figsize=(25,25), legend=True, vmin=0, vmax=dfmax)#vmax=test_preds['delta'].max(), vmin=test_preds['delta'].min())
-            cx.add_basemap(ax, alpha = .7, crs=_geom_df.crs.to_string())
+ #           ax = _geom_df.plot(self.date, cmap="cool", markersize=30,figsize=(25,25), legend=True, vmin=0, vmax=dfmax)#vmax=test_preds['delta'].max(), vmin=test_preds['delta'].min())
+ #           cx.add_basemap(ax, alpha = .7, crs=_geom_df.crs.to_string())
 
-
-            plt.show()
+#
+ #           plt.show()
         
         return self.Forecast[Region]
     
@@ -661,12 +827,12 @@ class SWE_Prediction():
         #get all SWE regions data into one DF
 
         self.NA_SWE = pd.DataFrame()
-        columns = ['Long', 'Lat', 'elevation_m', 'northness', self.datecol]
+        columns = ['Long', 'Lat', 'elevation_m', 'northness', self.date]
 
         for region in self.Forecast:
             self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
 
-        self.NA_SWE = self.NA_SWE.rename(columns = {self.datecol:'SWE'})
+        self.NA_SWE = self.NA_SWE.rename(columns = {self.date:'SWE'})
         
 
         #round to 2 decimals
@@ -705,7 +871,7 @@ class SWE_Prediction():
         target_variable_xr = target_variable_xr.rename("SWE")
 
         #save as netCDF
-        target_variable_xr.to_netcdf(self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+self.datecol+'.nc')
+        target_variable_xr.to_netcdf(self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+self.date+'.nc')
         
         #show plot
         print('File conversion to netcdf complete')
@@ -719,12 +885,12 @@ class SWE_Prediction():
         #get all SWE regions data into one DF
 
         self.NA_SWE = pd.DataFrame()
-        columns = ['Long', 'Lat', 'elevation_m', 'northness', self.datecol]
+        columns = ['Long', 'Lat', 'elevation_m', 'northness', self.date]
 
         for region in self.Forecast:
             self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
 
-        self.NA_SWE = self.NA_SWE.rename(columns = {self.datecol:'SWE'})
+        self.NA_SWE = self.NA_SWE.rename(columns = {self.date:'SWE'})
         
 
         #round to 2 decimals
@@ -757,7 +923,7 @@ class SWE_Prediction():
         self.SWE_array = self.DFG['SWE'].values.reshape(1,len(self.latrange),len(self.lonrange))
 
        # create nc filepath
-        fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+self.datecol+'.nc'
+        fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+self.date+'.nc'
         
         # make nc file, set lat/long, time
         ds = nc.Dataset(fn, 'w', format = 'NETCDF4')
@@ -766,7 +932,7 @@ class SWE_Prediction():
         time = ds.createDimension('time', None)
         
         #make nc file metadata
-        ds.title = 'SWE interpolation for ' + self.datecol
+        ds.title = 'SWE interpolation for ' + self.date
 
         lat = ds.createVariable('lat', np.float32, ('lat',))
         lat.units = 'degrees_north'
@@ -803,7 +969,7 @@ class SWE_Prediction():
         
         #Set date/time information
         times_arr = time[:]
-        dates = [dt.datetime(int(self.datecol[0:4]),int(self.datecol[5:7]),int(self.datecol[8:]),0)]
+        dates = [dt.datetime(int(self.date[0:4]),int(self.date[5:7]),int(self.date[8:]),0)]
         times = date2num(dates, time.units)
         time[:] = times
         
@@ -823,12 +989,12 @@ class SWE_Prediction():
         #get all SWE regions data into one DF
 
         self.NA_SWE = pd.DataFrame()
-        columns = ['Long', 'Lat', 'elevation_m', 'northness', self.datecol]
+        columns = ['Long', 'Lat', 'elevation_m', 'northness', self.date]
 
         for region in self.Forecast:
             self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
 
-        self.NA_SWE = self.NA_SWE.rename(columns = {self.datecol:'SWE'})
+        self.NA_SWE = self.NA_SWE.rename(columns = {self.date:'SWE'})
         
 
         #round to 2 decimals
@@ -860,7 +1026,7 @@ class SWE_Prediction():
         self.SWE_array = self.DFG['SWE'].values.reshape(1,len(self.latrange),len(self.lonrange))
 
        # create nc filepath
-        fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+self.datecol+'_CONUS.nc'
+        fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+self.date+'_CONUS.nc'
         
         # make nc file, set lat/long, time
         ds = nc.Dataset(fn, 'w', format = 'NETCDF4')
@@ -869,7 +1035,7 @@ class SWE_Prediction():
         time = ds.createDimension('time', None)
         
         #make nc file metadata
-        ds.title = 'SWE interpolation for ' + self.datecol
+        ds.title = 'SWE interpolation for ' + self.date
 
         lat = ds.createVariable('lat', np.float32, ('lat',))
         lat.units = 'degrees_north'
@@ -906,7 +1072,7 @@ class SWE_Prediction():
         
         #Set date/time information
         times_arr = time[:]
-        dates = [dt.datetime(int(self.datecol[0:4]),int(self.datecol[5:7]),int(self.datecol[8:]),0)]
+        dates = [dt.datetime(int(self.date[0:4]),int(self.date[5:7]),int(self.date[8:]),0)]
         times = date2num(dates, time.units)
         time[:] = times
         
@@ -941,7 +1107,7 @@ class SWE_Prediction():
         
         
         #load file
-        fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+ self.datecol+'.nc'
+        fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+ self.date+'.nc'
         SWE = nc.Dataset(fn)
 
         #Get area of interest
@@ -985,7 +1151,7 @@ class SWE_Prediction():
         
         
         #load file
-        fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+ self.datecol+'_CONUS.nc'
+        fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+ self.date+'_CONUS.nc'
         
         #open netcdf file with rioxarray
         xr = rxr.open_rasterio(fn)
@@ -1037,7 +1203,7 @@ class SWE_Prediction():
         
         #code for webbrowser app
         if web == True:
-            output_file =  self.cwd +'/Data/NetCDF/SWE_'+self.datecol+'.html'
+            output_file =  self.cwd +'/Data/NetCDF/SWE_'+self.date+'.html'
             m.save(output_file)
             webbrowser.open(output_file, new=2)
             
@@ -1049,7 +1215,7 @@ class SWE_Prediction():
 
      #produce an interactive plot using Folium
     def plot_interactive_SWE(self, pinlat, pinlong, web):
-        fnConus = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+self.datecol+'_CONUS.nc'
+        fnConus = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+self.date+'_CONUS.nc'
 
         #xr = rxr.open_rasterio(fn)
         xrConus = rxr.open_rasterio(fnConus)
@@ -1096,14 +1262,14 @@ class SWE_Prediction():
             highlight=False, 
             smooth_factor=1.0,
             #threshold_scale=[100, 250, 500, 1000, 2000],
-            legend_name= 'SWE in inches for '+ self.datecol).add_to(m)
+            legend_name= 'SWE in inches for '+ self.date).add_to(m)
 
         # Convert points to GeoJson
         folium.features.GeoJson(SWE_gdf,  
                                 name='Snow Water Equivalent',
                                 style_function=lambda x: {'color':'transparent','fillColor':'transparent','weight':0},
                                 tooltip=folium.features.GeoJsonTooltip(fields=['SWE'],
-                                                                        aliases = ['Snow Water Equivalent (in) for '+ self.datecol+ ':'],
+                                                                        aliases = ['Snow Water Equivalent (in) for '+ self.date+ ':'],
                                                                         labels=True,
                                                                         sticky=True,
                                                                          localize=True
@@ -1113,7 +1279,7 @@ class SWE_Prediction():
         
          #code for webbrowser app
         if web == True:
-            output_file =  self.cwd +'/Data/NetCDF/SWE_'+self.datecol+'_Interactive.html'
+            output_file =  self.cwd +'/Data/NetCDF/SWE_'+self.date+'_Interactive.html'
             m.save(output_file)
             webbrowser.open(output_file, new=2)
 
