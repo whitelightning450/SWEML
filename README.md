@@ -8,18 +8,14 @@
 ![GitHub repo size](https://img.shields.io/github/repo-size/whitelightning450/National-ML-Snow-Prediction-Mod?logo=Github&style=flat-square)
 
 ### Deep Learning national scale 1 km resolution SWE prediction model
-
-
-Seasonal snow-derived water is a critical component of the water supply in the mountains and connected downstream regions. 
-The need for an accurate understanding and characterization of available water in the form of snow-water-equivalent (SWE), peak SWE, and snowmelt onset are essential global inputs for water management efforts. 
-Traditional SWE estimation leverages physically-based models that characterize the feedbacks and interactions between influencing factors (i.e., incoming solar radiation, wind speed and direction, precipitation type and quantity, elevation and aspect, etc.). 
-While robust physically-based models predict snow depth and corresponding SWE values well in homogeneous settings, these models exhibit limitations in operational conditions in response to spatial resolution, landscape heterogeneity, and the quality of input data. 
-In critical watersheds, on-ground snow sampling remains the most accurate methodology for extrapolating key snowpack information. 
-However, the resource intensity and the optimization of sampling networks challenge the large-scale application of these methods. 
-The most recent advancements in snow modeling align with improvements in machine learning (ML) and artificial intelligence (Ai) to optimally characterize snowpack across various scales and in near real-time. 
-Leveraging a collaborative partnership between the Alabama Water Institute (AWI) at the University of Alabama (UA) and the University of Utah (UU), we introduce a hierarchical deep learning model and data assimilation pipeline to address the need for a high-spatial national-scale machine learning SWE prediction model. 
-This model consists of twenty-three regionally specific sub-models tailored to the unique topography and hydroclimate phenomena in the Western U.S., exhibiting an RMSE less than 2” and a coefficient of determination approaching 0.99 on predictions spanning the 2013-2017 training period.
- Competing in the U.S. Bureau of Reclamation Snowcast Showdown presents an opportunity to evaluate near-real-time operational modeling performance, establishing the foundation for Snow-ML programs to advance snow-related products within the NOAA-OWP, such as the National Water Model (NWM), to enhance streamflow prediction and related water resources planning and management resources to a broad range of stakeholders. 
+Snow-derived water is a critical hydrological component for characterizing the quantity of water available for domestic, recreation, agriculture, and power generation in the western United States.
+Advancing the efficiency and optimization of these aspects of water resources management requires an enhanced characterization of the snow state variable, particularly the essential global inputs of snow-water-equivalent (SWE), peak SWE, and snowmelt onset for hydrological models.
+While physically-based models that characterize the feedbacks and interactions between influencing factors predict SWE values well in homogeneous settings, these models exhibit limitations for CONUS-scale deployment due to challenges attributed to spatial resolution, landscape heterogeneity, and computational intensity. 
+Leveraging a collaborative partnership between the Alabama Water Institute (AWI) at the University of Alabama (UA) and the University of Utah (UU), we address these limitations through the National Snow Model (NSM) as a full stack data-driven machine learning (ML) platform with a modular structure to account for the heterogeneity of climate and topographical influences on SWE across the western United States.
+This model consists of twenty-three regionally specific sub-models tailored to the unique topography and hydroclimate phenomena in the Western U.S., exhibiting an RMSE less than 8 cm and a coefficient of determination approaching 0.99 on predictions spanning the 2013-2017 training period.
+The NSM pipeline assimilates nearly 700 snow telemetry (SNOTEL) and California Data Exchange Center (CDEC) sites and combines with processed lidar-derived terrain features for the prediction of a 1 km x 1 km SWE inference in critical snowsheds under 20 minutes on personal computer.
+We complete the full stack product by leveraging the Tethys interface (TBA), supporting the interactive use of the results (i.e., individual to HUC-scale SWE estimates).
+With preliminary regional testing performance ranging between 2.5 cm to 8 cm (i.e., RMSE), this model has the potential to advance the snow state variable in hydrological models such as the National Water Model to improve the estimates of peak flow for flood management and low-flows for supply operations. 
  This readme describes the necessary Python dependencies, training sources, and instructions to get the ML model running for near-real-time SWE inference.
 
 
@@ -32,9 +28,7 @@ Below is a high-level overview of the necessary steps, which we go into more det
 3. Model Spin-up. Model predictions for after the initial conditions (SWE_Prediction.ipynb) up to the current set of observations.
 4. Inference. Same as the previous step but for to-date observations.
 
-
-
-![InitialRun](https://user-images.githubusercontent.com/33735397/155603114-d0f56d80-7b1a-4899-a567-ca76527c3787.PNG)
+![InitialRun](https://user-images.githubusercontent.com/33735397/182939128-07ee36a9-ba66-4399-9b2e-b5e574324d66.PNG)
 
 Figure 1. The initial conditions model requires the date to be January 20th, 2022, and the previous date to be January 13th, 2022. This step makes predictions for all locations to begin model spin up. 
 
@@ -65,7 +59,7 @@ See Figure 4 for an example. This script loads the to-date ground features data 
 Model predictions are illustrated similarly to Figures 2 and 3.
 The model matches all predictions to the submission_format.csv, and saves all predictions and associated data into the Predictions folder for use as features in the next week’s model run.
 
-![PredictionRun](https://user-images.githubusercontent.com/33735397/155616234-f7cec34d-7166-43f7-bc9e-08c7bbe99595.PNG)
+![ModelSpinUp](https://user-images.githubusercontent.com/33735397/182938274-81a14af4-7de6-4a65-bb24-d165bfd9c3c4.PNG)
 
 Figure 4. For a prediction run for February 10th, 2022, the current and previous dates should be entered as illustrated.
 
@@ -75,7 +69,7 @@ Python: Version 3.8 or later
 
 ### Required packages
 
-| os           | contextily | pandas             |
+| os           | ulmo       | pandas             |
 |:-----------: | :--------: | :----------------: | 
 | io           | shapely    | datetime           |
 | re           | rasterio   | matplot.pyplot     |
@@ -98,7 +92,7 @@ Python: Version 3.8 or later
 Training data for the model was obtained through the drivendata.org online Development Stage data download portal: 
 https://www.drivendata.org/competitions/86/competition-reclamation-snow-water-dev/data/
 
-Ground measurements for training were obtained from the provided SNOTEL and CDEC measurement file: ground_measure_features.csv
+Ground measurements for training were obtained from the provided SNOTEL and CDEC measurement file: ground_measure_features_template.csv
 
 Latitude, Longitude, and Elevation for all measurement locations were obtained from the metadata file: ground_measures_metadata.csv
 
@@ -111,12 +105,6 @@ The submission grid cell ids were identified by latitude and longitude into one 
 Previous SWE and Delta SWE values were derived for each grid cell, and for each ground measurement site, as the previous measured or estimated SWE value at that location, and as the current measure or estimated SWE value - previous measure or estimated SWE value, respectively. 
 Aspect and slope angle from the geoJSON data for each gridcell was converted to northness on a scale of -1 to 1. 
 The training data is compiled in /Data_Processing_Assimilation/Geoprocessing_and_Training/Data_Training.ipynb  into a dictionary format and saved as a .h5 file (/Data/Model_Calibraition_Data/RegionTrain_Final.h5).
-
-### Model Prediction Data
-Weekly SNOTEL and CDEC SWE measurements used for updating model inference throughout the project duration are obtained through the drivendata.org online Evaluation Stage data download portal: 
-https://www.drivendata.org/competitions/90/competition-reclamation-snow-water-eval/data/
-Once downloaded from the data portal, weekly ground measures are saved in /Data/Pre_Processed. 
-The ipynb script, /Data_Processing_Assimilation/Geoprocessing_and_Training/Forecasting_Geoprocessing.ipynb compiles the updated ground measures into a formatted dictionary file for inference, saved within /Data/Processed
 
 ## Model instructions: Training
 The Wasatch Snow-ML model calibration scripts are located in the following directory:
@@ -188,7 +176,20 @@ Figure 7.  The barplot illustrates each model’s predictive error over the unse
 Figure 8.  A parity plot informs on outliers and regional predictive performance. 
 
 
+# Near-Real-Time Snow-Water-Equivalent Estimation
+The current iteration of the NSM makes 20,000 1 km x 1km SWE inferences for select locations throughout the Western U.S.
+There is a heavy focus on SWE inferences in the Sierra Nevada mountains, Colorado Rockies, and Wind River Range in Wyoming. 
+Once the user inititates Model Run up (i.e., SWE_Initial_Conditions_Prediction), the NSM_SWE_Prediction script makes predictions for the remainder of the water year. 
+This script includes a Data_Assimilation() function that retrieves all SWE observations from SNOTEL and CDEC snow monitoring locations for the date of interest (currently set up to make predictions each Thursday).
+The Data_Processing() function creates a model-friendly dataframe for each regions to drive each regional ML model (i.e., SWE_Predict()).
+Two new functions support further use of the model results, the netCDF() and plot_interactive() functions.
+The netCDF() saves the model results in the common netcdf file format for use in other water resources applications.
+The plot_interactive() function creates an html file to support the interactive exploration of SWE accross the western U.S. 
+This function allows the user to input coordinates of interest to start the map at this location.
 
+
+![SWEinteractive](https://user-images.githubusercontent.com/33735397/182941234-c56d2a17-03eb-4e28-bddf-476485bf3074.PNG)
+Figure 9. The NSM supports an interactive SWE inference interface to explore how SWE changes with location accross the western U.S. 
 
 ## Project support through the University of Alabama and the University of Utah
 ![UU](https://user-images.githubusercontent.com/33735397/155627859-a34f7856-22a5-4376-89ca-a59b70f3692e.PNG)
