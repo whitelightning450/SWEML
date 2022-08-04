@@ -75,7 +75,7 @@ Python: Version 3.8 or later
 
 ### Required packages
 
-| os           | contextily | pandas             |
+| os           | ulmo       | pandas             |
 |:-----------: | :--------: | :----------------: | 
 | io           | shapely    | datetime           |
 | re           | rasterio   | matplot.pyplot     |
