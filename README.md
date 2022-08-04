@@ -32,9 +32,7 @@ Below is a high-level overview of the necessary steps, which we go into more det
 3. Model Spin-up. Model predictions for after the initial conditions (SWE_Prediction.ipynb) up to the current set of observations.
 4. Inference. Same as the previous step but for to-date observations.
 
-
-
-![InitialRun](https://user-images.githubusercontent.com/33735397/155603114-d0f56d80-7b1a-4899-a567-ca76527c3787.PNG)
+![ModelSpinUp](https://user-images.githubusercontent.com/33735397/182938274-81a14af4-7de6-4a65-bb24-d165bfd9c3c4.PNG)
 
 Figure 1. The initial conditions model requires the date to be January 20th, 2022, and the previous date to be January 13th, 2022. This step makes predictions for all locations to begin model spin up. 
 
