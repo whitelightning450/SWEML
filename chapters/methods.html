@@ -1,0 +1,836 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Machine Learning Methods and Tools &#8212; Use Case Template</title>
+    
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
+
+    
+  <link rel="stylesheet"
+    href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" href="../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/design-style.b7bb847fb20b106c3d81b95245e65545.min.css" />
+    
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf">
+
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/clipboard.min.js"></script>
+    <script src="../_static/copybutton.js"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
+    <script src="../_static/design-tabs.js"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"
+const thebe_selector = ".thebe,.cell"
+const thebe_selector_input = "pre"
+const thebe_selector_output = ".output, .cell_output"
+</script>
+    <script async="async" src="../_static/sphinx-thebe.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Data Preparation" href="data.html" />
+    <link rel="prev" title="Motivation (Science or Utility)" href="motivation.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="None">
+    
+
+    <!-- Google Analytics -->
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="60">
+<!-- Checkboxes to toggle the left sidebar -->
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle navigation sidebar">
+<label class="overlay overlay-navbar" for="__navigation">
+    <div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input type="checkbox" class="sidebar-toggle" name="__page-toc" id="__page-toc" aria-label="Toggle in-page Table of Contents">
+<label class="overlay overlay-pagetoc" for="__page-toc">
+    <div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+    <div class="bd-sidebar__content">
+        <div class="bd-sidebar__top"><div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="../index.html">
+      
+        <!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+        
+      
+      
+      <img src="../_static/GeoSMART_logo.svg" class="logo" alt="logo">
+      
+      
+      <h1 class="site-logo" id="site-title">Use Case Template</h1>
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search this book..." aria-label="Search this book..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item active">
+        <p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  About
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference external" href="https://geo-smart.github.io/index.html">
+   Geosmart Website
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference external" href="https://foundations.projectpythia.org/landing-page.html">
+   Project Pythia Foundations
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="about.html">
+   About the GeoSMART Snow ML Use Case Library
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Chapter One
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="motivation.html">
+   Motivation (Science or Utility)
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Chapter Two
+ </span>
+</p>
+<ul class="current nav bd-sidenav">
+ <li class="toctree-l1 current active">
+  <a class="current reference internal" href="#">
+   Machine Learning Methods and Tools
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Chapter Three
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="data.html">
+   Data Preparation
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Chapter Four
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="development.html">
+   Model Development and Parameter Tuning
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Chapter Five
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="training.html">
+   Model Training
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Chapter Six
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="evaluation.html">
+   Performance Evaluation
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Chapter Seven
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="workflow.html">
+   Workflow Management / Cloud Computing
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Chapter Eight
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="reproducibility.html">
+   Reproducibility
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Chapter Nine
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="conclusion.html">
+   Discussion / Conclusion
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Chapter Ten (optional)
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="todo.html">
+   Try something on your own
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Chapter Eleven (optional)
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="questions.html">
+   Open questions
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Chapter Twelve (optional)
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="troubleshooting.html">
+   Trouble Shooting
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Chapter Thirteen
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="example.html">
+   Sample Jupyter Notebook
+  </a>
+ </li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+ <span class="caption-text">
+  Reference
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="../reference/glossary.html">
+   Glossaries
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="../reference/bibliography.html">
+   Bibliography
+  </a>
+ </li>
+</ul>
+
+    </div>
+</nav></div>
+        <div class="bd-sidebar__bottom">
+             <!-- To handle the deprecated key -->
+            
+            <div class="navbar_extra_footer">
+            Powered by <a href="https://jupyterbook.org">Jupyter Book</a>
+            </div>
+            
+        </div>
+    </div>
+    <div id="rtd-footer-container"></div>
+</div>
+
+
+          
+
+
+          
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+    
+    <div class="header-article row sticky-top noprint">
+        
+
+
+
+<div class="col py-1 d-flex header-article-main">
+    <div class="header-article__left">
+        
+        <label for="__navigation"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="right"
+title="Toggle navigation"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-bars"></i>
+  </span>
+
+</label>
+
+        
+    </div>
+    <div class="header-article__right">
+<div class="menu-dropdown menu-dropdown-launch-buttons">
+  <button class="headerbtn menu-dropdown__trigger"
+      aria-label="Launch interactive content">
+      <i class="fas fa-rocket"></i>
+  </button>
+  <div class="menu-dropdown__content">
+    <ul>
+      <li>
+        <a href="https://mybinder.org/v2/gh/geo-smart/use_case_template/main?urlpath=lab/tree/book/chapters/methods.ipynb"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="left"
+title="Launch on Binder"
+>
+  
+
+<span class="headerbtn__icon-container">
+  
+    <img src="../_static/images/logo_binder.svg">
+  </span>
+<span class="headerbtn__text-container">Binder</span>
+</a>
+
+      </li>
+      
+    </ul>
+  </div>
+</div>
+
+<button onclick="toggleFullScreen()"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="bottom"
+title="Fullscreen mode"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+<div class="menu-dropdown menu-dropdown-repository-buttons">
+  <button class="headerbtn menu-dropdown__trigger"
+      aria-label="Source repositories">
+      <i class="fab fa-github"></i>
+  </button>
+  <div class="menu-dropdown__content">
+    <ul>
+      <li>
+        <a href="https://github.com/geo-smart/use_case_template"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="left"
+title="Source repository"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="headerbtn__text-container">repository</span>
+</a>
+
+      </li>
+      
+      <li>
+        <a href="https://github.com/geo-smart/use_case_template/issues/new?title=Issue%20on%20page%20%2Fchapters/methods.html&body=Your%20issue%20content%20here."
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="left"
+title="Open an issue"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="headerbtn__text-container">open issue</span>
+</a>
+
+      </li>
+      
+      <li>
+        <a href="https://github.com/geo-smart/use_case_template/edit/main/book/chapters/methods.ipynb"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="left"
+title="Edit this page"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="headerbtn__text-container">suggest edit</span>
+</a>
+
+      </li>
+      
+    </ul>
+  </div>
+</div>
+
+<div class="menu-dropdown menu-dropdown-download-buttons">
+  <button class="headerbtn menu-dropdown__trigger"
+      aria-label="Download this page">
+      <i class="fas fa-download"></i>
+  </button>
+  <div class="menu-dropdown__content">
+    <ul>
+      <li>
+        <a href="../_sources/chapters/methods.ipynb"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="left"
+title="Download source file"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="headerbtn__text-container">.ipynb</span>
+</a>
+
+      </li>
+      
+      <li>
+        
+<button onclick="printPdf(this)"
+  class="headerbtn"
+  data-toggle="tooltip"
+data-placement="left"
+title="Print to PDF"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="headerbtn__text-container">.pdf</span>
+</button>
+
+      </li>
+      
+    </ul>
+  </div>
+</div>
+<label for="__page-toc"
+  class="headerbtn headerbtn-page-toc"
+  
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-list"></i>
+  </span>
+
+</label>
+
+    </div>
+</div>
+
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+    <div class="tocsection onthispage pt-5 pb-3">
+        <i class="fas fa-list"></i> Contents
+    </div>
+    <nav id="bd-toc-nav" aria-label="Page">
+        <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#study-area-description">
+   Study Area Description
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#machine-learning-approach">
+   Machine Learning Approach
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#data">
+   Data
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#geoweaver">
+   GeoWeaver
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#machine-learning-models">
+   Machine Learning Models
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#lightgbm">
+     LightGBM
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#mlp">
+     MLP
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#dependencies-versions-environments">
+   Dependencies (versions, environments)
+  </a>
+ </li>
+</ul>
+
+    </nav>
+</div>
+    </div>
+    <div class="article row">
+        <div class="col pl-md-3 pl-lg-5 content-container">
+            <!-- Table of contents that is only displayed when printing the page -->
+            <div id="jb-print-docs-body" class="onlyprint">
+                <h1>Machine Learning Methods and Tools</h1>
+                <!-- Table of contents -->
+                <div id="print-main-content">
+                    <div id="jb-print-toc">
+                        
+                        <div>
+                            <h2> Contents </h2>
+                        </div>
+                        <nav aria-label="Page">
+                            <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#study-area-description">
+   Study Area Description
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#machine-learning-approach">
+   Machine Learning Approach
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#data">
+   Data
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#geoweaver">
+   GeoWeaver
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#machine-learning-models">
+   Machine Learning Models
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#lightgbm">
+     LightGBM
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#mlp">
+     MLP
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#dependencies-versions-environments">
+   Dependencies (versions, environments)
+  </a>
+ </li>
+</ul>
+
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            <main id="main-content" role="main">
+                
+              <div>
+                
+  <section class="tex2jax_ignore mathjax_ignore" id="machine-learning-methods-and-tools">
+<h1>Machine Learning Methods and Tools<a class="headerlink" href="#machine-learning-methods-and-tools" title="Permalink to this headline">#</a></h1>
+<p>Explain the method and why you think it’s suitable for your use case. Explain the choice of tools/packages/data and the reason for use.</p>
+<p>Addressing a key gap in the application of ML for SWE estimation, we introduce a novel two-step ML framework combining gradient boosted decision trees with feature optimization for the selection of training features to inform regionally optimized ANNs.
+With a motivation to enhance SWE characterization targeting large-scale water resources management, we validate the framework by evaluating the performance of SWE estimates for 20,000 locations across the western U.S. at a 1-km scale and weekly temporal resolution.
+This sections explains the methodology for developing the national-scale SWE estimation model and dives deeper into the case application in the Colorodo region that this tutorial executes.</p>
+<section id="study-area-description">
+<h2>Study Area Description<a class="headerlink" href="#study-area-description" title="Permalink to this headline">#</a></h2>
+<p>Model developmnet leverage data from SNOTEL sites located throughout 11 states ranging from the US-Canada border to the US-Mexico border and from the Pacific coast to the eastern slope of the Rocky Mountains to establish the study periphery.
+The modeling domain includes all major mountain ranges but contains a greater portion of observations within the Sierra Nevada and the Rocky Mountains, where the water supply is dominated by seasonal snowpack and ongoing efforts by the Airborne Snow Observatory (ASO) provide ample data for data-driven model development.</p>
+</section>
+<section id="machine-learning-approach">
+<h2>Machine Learning Approach<a class="headerlink" href="#machine-learning-approach" title="Permalink to this headline">#</a></h2>
+<p>Snow falls different accross the western US, and thus, was decided upon to develop a distributed ML SWE estimation model addressing the unique hydrometeorological variability observed in the modeling doamain.
+For example, the western U.S. contains snow climate classifications of coastal, coastal transitional, intermountain, and continental.
+The modeling framework addresses the heterogeneity in snow processes through the the division of the study area into 23 regional locations.
+Dividing the model into sub-regions allows for the separation of microclimates to reduce the influence of individual region dynamics on differing regions during model training.</p>
+<a class="reference internal image-reference" href="../_images/Distribution.jpg"><img alt="drawing" class="align-center" src="../_images/Distribution.jpg" style="width: 1000px;" /></a>
+</section>
+<section id="data">
+<h2>Data<a class="headerlink" href="#data" title="Permalink to this headline">#</a></h2>
+<p>Machine learning models “learn” the relationships between independent and dependent variables through large amounts of data.
+Data sourced for the model consisted of geographic and topographic information from the Copernicus Digital Elevation Model (90-m DEM) and ground measurement data from the NRCS Snow Telemetry and Snow Course program (i.e., SNOTEL), as well as from the California Department of Water Resources California Data Exchange Center (CDEC).
+In total, geographic and weekly SWE observational data from 594 SNOTEL sites and 106 CDEC sites from 2013-2017 are collated.
+Weekly observations of the most recent date available at the same locations support near-real-time model inference.</p>
+<p>Model development investigated the use of climatological data from the National Oceanic and Atmospheric Administration’s (NOAA) High-Resolution Rapid Refresh dataset (HRRR) and multispectral imagery from the Sentinal-1 remote sensing satellite mission.
+However, the large computational resources required to load and process the data became limiting to the production of expeditious SWE estimates at scale.
+The limitations were the result of the large-memory tiled datasets and the need for point-scale architecture required by the ML models to train, test, and predict.
+The data processing requirements to convert observations into training datasets are computationally expensive and unfeasible for fast-paced development, even for high-performance computing.</p>
+<a class="reference internal image-reference" href="../_images/Distribution_locations_number.jpg"><img alt="drawing" class="align-center" src="../_images/Distribution_locations_number.jpg" style="width: 1000px;" /></a>
+</section>
+<section id="geoweaver">
+<h2>GeoWeaver<a class="headerlink" href="#geoweaver" title="Permalink to this headline">#</a></h2>
+<p>The model has been adapted to the open-source workflow management sytem, <a class="reference external" href="https://github.com/ESIPFed/Geoweaver">GeoWeaver</a>. Geoweaver is a web-based application for interactive, full-stack machine leanring workflow management. The app provdies a user-friendly GUI to interact with and persistently store script logs and code revision histories. Shell and python scripts are supported by the platform, as well as seammless intergration wth Jupyter.</p>
+<p>A detailed overview of the use of the model within Geoweaver is provided in  Chapter 7. <a class="reference internal" href="workflow.html"><span class="doc std std-doc">Workflow Management and Cloud Computing</span></a></p>
+<a class="reference internal image-reference" href="../_images/GeoWeaver.JPG"><img alt="drawing" class="align-center" src="../_images/GeoWeaver.JPG" style="width: 500px;" /></a>
+</section>
+<section id="machine-learning-models">
+<h2>Machine Learning Models<a class="headerlink" href="#machine-learning-models" title="Permalink to this headline">#</a></h2>
+<p>There are many different types of machine learning models for differnt applications, such as classification, regression, and clustering.
+For the application of predicting 1-km gridded SWE, a regression model is the best approach.
+While there are many regression-based machine learning algorithms, we use <a class="reference external" href="https://lightgbm.readthedocs.io/en/v3.3.2/">Light Gradient Boosted Models (LightGBM)</a> and <a class="reference external" href="https://www.tensorflow.org/tutorials/keras/regression">Multi-Layered Perceptron networks (MLP)</a>.
+Below is a brief description of each machine learning modeling methodlogy.</p>
+<section id="lightgbm">
+<h3>LightGBM<a class="headerlink" href="#lightgbm" title="Permalink to this headline">#</a></h3>
+<p>Gradient boosted decision trees (GBDT) are a machine learning algorithm exhibiting impressive performance across various classification and regression applications.
+The algorithm generates a solution based on an ensemble of learning models, where weak learner trees, trained on the residuals of an initial strong learner, are iteratively added to the model to minimize the overall loss function (negative root-mean-squared-error) of the model via gradient descent of the individual weak learners.</p>
+<p>The LightGBM framework is an evolution of GBDT, and introduces Gradient-based One-Side Sampling (GOSS) to the boosting algorithm.
+GOSS focuses the model learning on trees with larger gradients and randomly drops learners with small gradients to provide a more efficient and more accurate gain estimation than with traditional gradient boosting.</p>
+</section>
+<section id="mlp">
+<h3>MLP<a class="headerlink" href="#mlp" title="Permalink to this headline">#</a></h3>
+<p>The MLP is a classical type of feedforward ANN, being successfully and frequently applied in environmental modeling applications.
+The MLP regression model estimates a target variable by learning a non-linear function to describe the target from an input vector of features.
+It performs learning via a back-propagation algorithm over a series of hidden layers containing interconnected nodes (neurons).
+The neurons connect bordering layers by a summation of weights and an activation function transforms model outputs to predicted values.
+The model calculates error and adjusts the weights to minimize the error during model training, supporting the use of
+MLPs to effectively describe a target variable with any function, continuous or discontinuous.</p>
+</section>
+</section>
+<section id="dependencies-versions-environments">
+<h2>Dependencies (versions, environments)<a class="headerlink" href="#dependencies-versions-environments" title="Permalink to this headline">#</a></h2>
+<p>The modeling framework was built using Python Version 3.8.
+Below is a url-linked list of the required packages needed to process the data, train the model, process results, and visualize the model outputs.
+Please take the time to review each package to understand its contribution in the machine learning pipeline.</p>
+<table class="colwidths-auto table">
+<thead>
+<tr class="row-odd"><th class="text-align:center head"><p><a class="reference external" href="https://docs.python.org/3/library/os.html">os</a></p></th>
+<th class="text-align:center head"><p><a class="reference external" href="https://ulmo.readthedocs.io/en/latest/">ulmo</a></p></th>
+<th class="text-align:center head"><p><a class="reference external" href="https://pandas.pydata.org/">pandas</a></p></th>
+<th class="text-align:center head"><p><a class="reference external" href="https://docs.python.org/3/library/io.html">io</a></p></th>
+<th class="text-align:center head"><p><a class="reference external" href="https://pypi.org/project/shapely/">shapely</a></p></th>
+<th class="text-align:center head"><p><a class="reference external" href="https://docs.python.org/3/library/datetime.html">datetime</a></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-align:center"><p><a class="reference external" href="https://docs.python.org/3/library/re.html">re</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/rasterio/">rasterio</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/matplotlib/">matplot.pyplot</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://docs.python.org/3/library/copy.html">copy</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://lightgbm.readthedocs.io/en/latest/Python-Intro.html">lightgbm</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://numpy.org/">numpy</a></p></td>
+</tr>
+<tr class="row-odd"><td class="text-align:center"><p><a class="reference external" href="https://docs.python.org/3/library/time.html">time</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://www.tensorflow.org/">tensorflow</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pystac-client.readthedocs.io/en/stable/">pystac_client</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/tables/">tables</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://docs.python.org/3/library/platform.html">platfrom</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/planetary-computer/">planetary_computer</a></p></td>
+</tr>
+<tr class="row-even"><td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/xarray/">xarray</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/tqdm/">tqdm</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://docs.python.org/3/library/random.html">random</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/rioxarray/">rioxarray</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://geopandas.org/en/stable/getting_started/install.html">geopandas</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/requests/">requests</a></p></td>
+</tr>
+<tr class="row-odd"><td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/pyproj/">pyproj</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://richdem.readthedocs.io/en/latest/">richdem</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://scitools.org.uk/cartopy/docs/latest/installing.html">cartopy</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://www.h5py.org/">h5py</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/elevation/">elevation</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/cmocean/">cmocean</a></p></td>
+</tr>
+<tr class="row-even"><td class="text-align:center"><p><a class="reference external" href="https://matplotlib.org/2.2.2/mpl_toolkits/index.html">mpl_toolkits</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/hdfdict/">hdfdict</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://docs.python.org/3/library/warnings.html">warning</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://docs.python.org/3/library/math.html">math</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://docs.python.org/3/library/pickle.html">pickle</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://contextily.readthedocs.io/en/latest/">contextily</a></p></td>
+</tr>
+<tr class="row-odd"><td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/folium/">folium</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/branca/">branca</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://earthpy.readthedocs.io/en/latest/">earthpy</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/netCDF4/">netCDF4</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/osgeo/">osgeo</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://docs.python.org/3/library/webbrowser.html">webbrowser</a></p></td>
+</tr>
+<tr class="row-even"><td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/geojson/">geojson</a></p></td>
+<td class="text-align:center"><p><a class="reference external" href="https://pypi.org/project/Fiona/">fiona</a></p></td>
+<td class="text-align:center"><p></p></td>
+<td class="text-align:center"><p></p></td>
+<td class="text-align:center"><p></p></td>
+<td class="text-align:center"><p></p></td>
+</tr>
+</tbody>
+</table>
+<p><a class="reference internal" href="data.html"><span class="doc std std-doc">Next Chapter</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            kernelName: "python3",
+            path: "./chapters"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+              </div>
+              
+            </main>
+            <footer class="footer-article noprint">
+                
+    <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+    <a class='left-prev' id="prev-link" href="motivation.html" title="previous page">
+        <i class="fas fa-angle-left"></i>
+        <div class="prev-next-info">
+            <p class="prev-next-subtitle">previous</p>
+            <p class="prev-next-title">Motivation (Science or Utility)</p>
+        </div>
+    </a>
+    <a class='right-next' id="next-link" href="data.html" title="next page">
+    <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Data Preparation</p>
+    </div>
+    <i class="fas fa-angle-right"></i>
+    </a>
+</div>
+            </footer>
+        </div>
+    </div>
+    <div class="footer-content row">
+        <footer class="col footer"><p>
+  
+    By eScience Institute, University of Washington<br/>
+  
+      &copy; Copyright 2022.<br/>
+</p>
+        </footer>
+    </div>
+    
+</div>
+
+
+      </div>
+    </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+
+
+  </body>
+</html>
