@@ -1,6 +1,6 @@
 ![mountain](https://user-images.githubusercontent.com/33735397/155626251-72859ce7-e05a-4282-89be-6871b19ab234.PNG)
 
-# Geosmart Use Case Jupyter Book
+# National Snow Model: Using Machine Learnign to Advance Snow State Modeling
 
 [![Deploy](https://github.com/geo-smart/use_case_template/actions/workflows/deploy.yaml/badge.svg)](https://github.com/geo-smart/use_case_template/actions/workflows/deploy.yaml)
 [![Jupyter Book Badge](https://jupyterbook.org/badge.svg)](https://geo-smart.github.io/use_case_template)
