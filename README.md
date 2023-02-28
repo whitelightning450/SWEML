@@ -1,8 +1,11 @@
-
-
 ![mountain](https://user-images.githubusercontent.com/33735397/155626251-72859ce7-e05a-4282-89be-6871b19ab234.PNG)
 
-# National-Snow-Model (NSM)
+# National Snow Model: Using Machine Learning to Advance Snow State Modeling
+
+[![Deploy](https://github.com/geo-smart/use_case_template/actions/workflows/deploy.yaml/badge.svg)](https://github.com/geo-smart/use_case_template/actions/workflows/deploy.yaml)
+[![Jupyter Book Badge](https://jupyterbook.org/badge.svg)](https://geo-smart.github.io/use_case_template)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/geo-smart/use_case_template/HEAD?urlpath=lab)
+[![GeoSMART Use Case](./book/img/use_case_badge.svg)](https://geo-smart.github.io/usecases)
 ![GitHub](https://img.shields.io/github/license/whitelightning450/National-ML-Snow-Prediction-Mod?logo=GitHub&style=flat-square)
 ![GitHub top language](https://img.shields.io/github/languages/top/whitelightning450/National-ML-Snow-Prediction-Mod?logo=Jupyter&style=flat-square)
 ![GitHub repo size](https://img.shields.io/github/repo-size/whitelightning450/National-ML-Snow-Prediction-Mod?logo=Github&style=flat-square)
@@ -17,6 +20,23 @@ The NSM pipeline assimilates nearly 700 snow telemetry (SNOTEL) and California D
 We complete the full stack product by leveraging the Tethys interface (TBA), supporting the interactive use of the results (i.e., individual to HUC-scale SWE estimates).
 With preliminary regional testing performance ranging between 2.5 cm to 8 cm (i.e., RMSE), this model has the potential to advance the snow state variable in hydrological models such as the National Water Model to improve the estimates of peak flow for flood management and low-flows for supply operations. 
  This readme describes the necessary Python dependencies, training sources, and instructions to get the ML model running for near-real-time SWE inference.
+ 
+ 
+## Check out our Example Tutorial in the Upper Colorado River Basin
+ 
+This use case library contains a summary of the motivation behind the project, applicable ML methods and tools, the methods for data preparation, model development including the model training framework and evaluation, workflow management demonstrated using GeoWeaver, links to the complete model on GitHub as the model is data-intensive the tutorial is for a subset of the entire model, a discussion/conclusion, and a solitication to qestions.
+Below are the respective chapters addressing these items:
+
+1. [Motivation](./book/chapters/motivation.ipynb)
+2. [Machine Learning Methods and tools](./book/chapters/methods.ipynb)
+3. [Data Preparation](./book/chapters/data.ipynb)
+4. [Model Development and Parameter Tuning](./book/chapters/development.ipynb)
+5. [Model Training](./book/chapters/training.ipynb)
+6. [Evaluation of Model Performance](./book/chapters/evaluation.ipynb)
+7. [Workflow Management and Cloud Computing](./book/chapters/workflow.ipynb)
+8. [Reproducibility](./book/chapters/reproducibility.ipynb)
+9. [Discussion/Conclusion](./book/chapters/conclusion.ipynb)
+10. [Solicitation to Questions](./book/chapters/questions.ipynb)
 
 
 ## Model Running Instructions: Making a Model Inference

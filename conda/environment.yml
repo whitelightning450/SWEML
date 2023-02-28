@@ -1,0 +1,14 @@
+# `conda env create --name geosmart --file=environment.yml`
+# `conda activate geosmart`
+# `conda env update --file environment.yml --prune`
+
+name: geosmart
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - sphinxcontrib-bibtex
+  - jupyter-book=0.13
+  - jupytext
+  - plotly
+  - pandas
