@@ -1,4 +1,4 @@
-![mountain](https://user-images.githubusercontent.com/33735397/155626251-72859ce7-e05a-4282-89be-6871b19ab234.PNG)
+![NSM_Cover](https://user-images.githubusercontent.com/33735397/223741418-d1c5220b-74ca-4003-8068-d8116f710e29.JPG)
 
 # National Snow Model: Using Machine Learning to Advance Snow State Modeling
 
