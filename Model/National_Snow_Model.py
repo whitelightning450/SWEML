@@ -1,6 +1,6 @@
 #Wasatch snow model
 #Author: Ryan C. Johnson
-#Date: 2022-6-29
+#Date: 2022-3-09
 #This script assimilates SNOTEL observations, processes the data into a model friendly
 #format, then uses a calibrated multi-layered perceptron network to make 1 km x 1 km
 #CONUS scale SWE estimates. 
@@ -52,6 +52,9 @@ import json
 import geopandas as gpd, fiona, fiona.crs
 import webbrowser
 import warnings
+from progressbar import ProgressBar
+import shapely.geometry
+import threading 
 
 
 #import contextily as ctx
@@ -374,7 +377,7 @@ class SWE_Prediction():
     
     
     
-    def Data_Assimilation(self):
+    def Get_Monitoring_Data(self):
         GM_template = pd.read_csv(self.cwd+'/Data/Pre_Processed_DA/ground_measures_features_template.csv')
         GM_template = GM_template.rename(columns = {'Unnamed: 0': 'station_id'})
         GM_template.index =GM_template['station_id']
@@ -444,11 +447,175 @@ class SWE_Prediction():
         #SWE_df = SWE_df.set_index('station_id')
 
         SWE_df.to_csv(self.cwd+'\Data\Pre_Processed_DA\ground_measures_features_'+date+'.csv')
+        
+        
+    def get_SNOTEL_Threaded(self, sitecode, start_date, end_date):
+        #print(sitecode)
 
-                
-                
-                
-                
+        #This is the latest CUAHSI API endpoint
+        wsdlurl = 'https://hydroportal.cuahsi.org/Snotel/cuahsi_1_1.asmx?WSDL'
+
+        #Daily SWE
+        variablecode = 'SNOTEL:WTEQ_D'
+
+        values_df = None
+        try:
+            #Request data from the server
+            site_values = ulmo.cuahsi.wof.get_values(wsdlurl, sitecode, variablecode, start=start_date, end=end_date)
+
+            end_date=end_date.strftime('%Y-%m-%d')
+            #Convert to a Pandas DataFrame   
+            SNOTEL_SWE = pd.DataFrame.from_dict(site_values['values'])
+            #Parse the datetime values to Pandas Timestamp objects
+            SNOTEL_SWE['datetime'] = pd.to_datetime(SNOTEL_SWE['datetime'], utc=True)
+            #Set the DataFrame index to the Timestamps
+            SNOTEL_SWE = SNOTEL_SWE.set_index('datetime')
+            #Convert values to float and replace -9999 nodata values with NaN
+            SNOTEL_SWE['value'] = pd.to_numeric(SNOTEL_SWE['value']).replace(-9999, np.nan)
+            #Remove any records flagged with lower quality
+            SNOTEL_SWE = SNOTEL_SWE[SNOTEL_SWE['quality_control_level_code'] == '1']
+
+            #SNOTEL_SWE['station_id'] = sitecode
+            #SNOTEL_SWE.index = SNOTEL_SWE.station_id
+            #SNOTEL_SWE = SNOTEL_SWE.rename(columns = {'value':end_date})
+            #col = [end_date]
+            #SNOTEL_SWE = SNOTEL_SWE[col].iloc[-1:]
+            self.SWE_df[self.date].loc[sitecode] = SNOTEL_SWE['value'].values[0]
+
+        except:
+            print('Unable to fetch SWE data for site ', sitecode, 'SWE value: -9999')
+            #end_date=end_date.strftime('%Y-%m-%d')
+            #SNOTEL_SWE = pd.DataFrame(-9999, columns = ['station_id', end_date], index =[1])
+            #SNOTEL_SWE['station_id'] = sitecode
+            #SNOTEL_SWE = SNOTEL_SWE.set_index('station_id')
+            self.SWE_df[self.date].loc[sitecode] = -9999
+
+        #frames = [self.SWE_df, SNOTEL_SWE]
+        #self.SWE_df = pd.concat(frames)
+        #return SNOTEL_SWE
+
+
+
+    def get_CDEC_Threaded(self, station_id, sensor_id, resolution, start_date, end_date ):
+        
+        try:
+            url = 'https://cdec.water.ca.gov/dynamicapp/selectQuery?Stations=%s' % (station_id)+'&SensorNums=%s' % (sensor_id)+'&dur_code=%s'% (resolution) +'&Start=%s' % (start_date) + '&End=%s' %(end_date) 
+            CDEC_SWE = pd.read_html(url)[0]
+            CDEC_station_id = 'CDEC:'+station_id
+            CDEC_SWE['station_id'] = CDEC_station_id
+            CDEC_SWE = CDEC_SWE.set_index('station_id')
+            CDEC_SWE = pd.DataFrame(CDEC_SWE.iloc[-1]).T
+            col = ['SNOW WC INCHES']
+            CDEC_SWE = CDEC_SWE[col]
+            CDEC_SWE=CDEC_SWE.rename(columns = {'SNOW WC INCHES':end_date})
+            self.SWE_df[self.date].loc[CDEC_station_id] = CDEC_SWE[end_date].values[0]
+
+        except:
+            print('Unable to fetch SWE data for site ', station_id, 'SWE value: -9999')
+            CDEC_SWE = pd.DataFrame(-9999, columns = ['station_id', end_date], index =[1])
+            CDEC_station_id = 'CDEC:'+station_id
+            CDEC_SWE['station_id'] = CDEC_station_id
+            CDEC_SWE = CDEC_SWE.set_index('station_id')
+            self.SWE_df[self.date].loc[CDEC_station_id] = CDEC_SWE[end_date]
+
+            
+        #frames = [self.SWE_df, CDEC_SWE]    
+        #self.SWE_df = pd.concat(frames)
+        #return CDEC_SWE
+        
+    def Get_Monitoring_Data_Threaded(self):
+        GM_template = pd.read_csv(self.cwd+'/Data/Pre_Processed_DA/ground_measures_features_template.csv')
+        GM_template = GM_template.rename(columns = {'Unnamed: 0': 'station_id'})
+        GM_template.index =GM_template['station_id']
+        cols = ['Date']
+        GM_template =GM_template[cols]
+
+
+        #Get all records, can filter later,
+        self.CDECsites = list(GM_template.index)
+        self.CDECsites = list(filter(lambda x: 'CDEC' in x, self.CDECsites))
+        self.CDECsites_complete = self.CDECsites.copy()
+        self.CDECsites = [x[-3:] for x in self.CDECsites]
+        
+        self.Snotelsites = list(GM_template.index)
+        self.Snotelsites = list(filter(lambda x: 'SNOTEL' in x, self.Snotelsites))
+
+        
+        date = pd.to_datetime(self.date)
+
+        start_date = date-timedelta(days = 1)
+        start_date = start_date.strftime('%Y-%m-%d')
+
+        resolution = 'D'
+        sensor_id='3'
+        
+        #Make SWE observation dataframe        
+        self.station_ids = self.CDECsites_complete + self.Snotelsites
+        self.SWE_NA_fill = [-9999]*len(self.station_ids)
+        self.SWE_df = pd.DataFrame(list(zip(self.station_ids, self.SWE_NA_fill)),
+                                   columns = ['station_id', date.strftime('%Y-%m-%d')])
+        self.SWE_df = self.SWE_df.set_index('station_id')
+
+        print('Getting California Data Exchange Center SWE data from sites: ')
+        threads = []  # create list to store thread references
+        
+         # create new threads and append them to the list of threads
+        for site in self.CDECsites:
+            print(site)
+            # functions with arguments must have an 'empty' arg at the end of the passed 'args' tuple
+            t = threading.Thread(target=self.get_CDEC_Threaded, args=(site, sensor_id, resolution, start_date, date.strftime('%Y-%m-%d')))
+            threads.append(t)
+
+        # start all threads
+        for t in threads:
+            t.start()
+        # !!!!! IMPORTANT !!!!!
+        # join all threads to queue so the system will wait until every thread has completed
+        for t in threads:
+            t.join()
+    
+
+        print('Getting NRCS SNOTEL SWE data from sites: ')
+        threads = []  # create list to store thread references
+        
+         # create new threads and append them to the list of threads
+        for site in self.Snotelsites:
+            print(site)
+            # functions with arguments must have an 'empty' arg at the end of the passed 'args' tuple
+            t = threading.Thread(target=self.get_SNOTEL_Threaded, args=(site,  start_date, date))
+            threads.append(t)
+
+        # start all threads
+        for t in threads:
+            t.start()
+        # !!!!! IMPORTANT !!!!!
+        # join all threads to queue so the system will wait until every thread has completed
+        for t in threads:
+            t.join()
+        
+        date = date.strftime('%Y-%m-%d')
+
+        self.SWE_df= self.SWE_df[~self.SWE_df.index.duplicated(keep = 'first')]
+
+        #remove -- from CDEC predictions and make df a float
+        self.SWE_df[date] = self.SWE_df[date].astype(str)
+        self.SWE_df[date] = self.SWE_df[date].replace(['--'], -9999)
+        self.SWE_df[date] = pd.to_numeric(self.SWE_df[date], errors = 'coerce')
+        self.SWE_df[date] = self.SWE_df[date].fillna(-9999)
+
+        NegSWE = self.SWE_df[self.SWE_df[date].between(-10,-.1)].copy()
+        NegSWE[date] =0
+
+
+        self.SWE_df.update(NegSWE)
+        self.SWE_df.reset_index(inplace = True)
+        self.SWE_df=self.SWE_df.rename(columns = {'index': 'station_id'})
+        self.SWE_df = self.SWE_df.set_index('station_id')
+
+        self.SWE_df.to_csv(self.cwd+'\Data\Pre_Processed_DA\ground_measures_features_'+date+'.csv')
+
+
+    
     #Data Assimilation script, takes date and processes to run model.            
     def Data_Processing(self):
           
@@ -465,7 +632,7 @@ class SWE_Prediction():
 
 
         #All coordinates of 1 km polygon used to develop ave elevation, ave slope, ave aspect
-        path = self.cwd+'/Data/Processed/RegionVal.pkl'
+        path = self.cwd+'/Data/Processed/Region_Pred.pkl'
         #load regionalized geospatial data
         self.RegionTest = open(path, "rb")
         self.RegionTest = pickle.load(self.RegionTest)
@@ -530,7 +697,8 @@ class SWE_Prediction():
         #set up dataframe to save to be future GM_Pred
         col = list(self.GM_Test.columns)+['Region']
         self.Future_GM_Pred = pd.DataFrame(columns = col)
-
+        
+        print('Regional data QA/QC')
         for region in self.OG_Region_list:
             self.NaReplacement(region)
             self.RegionSnotel[region]['Prev_SWE'] =self.prev_RegionSnotel[region]['SWE']
@@ -564,7 +732,7 @@ class SWE_Prediction():
                 self.RegionTest[snotel][j] = self.RegionTest[snotel][j].to_frame().T
             #remove items we do not need
                 self.RegionTest[snotel][j] = self.RegionTest[snotel][j].drop(columns = ['Long', 'Lat', 'location',
-                                                                              'elevation_m', 'state', 'Region'])
+                                                                             'elevation_m', 'state', 'Region'])
             #make date index
                 self.RegionTest[snotel][j] = self.RegionTest[snotel][j].set_index('Date')
 
@@ -609,7 +777,7 @@ class SWE_Prediction():
             #save dictionaries as pkl
         # create a binary pickle file 
 
-        path = self.cwd+'/Data/Processed/ValidationDF_'+self.date + '.pkl'
+        path = self.cwd+'/Data/Processed/Prediction_DF_'+self.date + '.pkl'
 
         RVal = open(path,"wb")
 
@@ -644,42 +812,49 @@ class SWE_Prediction():
         
    #NA Replacement script for necessary SNOTEL sites without observations     
     def NaReplacement(self, region):
-        
-        #Make NA values mean snowpack values
-        meanSWE = np.mean(self.RegionSnotel[region]['SWE'][self.RegionSnotel[region]['SWE']>0])
+        #Make NA values mean snowpack values, put in >= for no snow times
+        meanSWE = np.mean(self.RegionSnotel[region]['SWE'][self.RegionSnotel[region]['SWE']>=0])
+        #print(region, meanSWE)
+        #add if statement to meanSWE
+        if meanSWE < 0.15:
+            meanSWE = 0
         self.RegionSnotel[region]['SWE'][self.RegionSnotel[region]['SWE']<0]= meanSWE
 
 
-        prev_meanSWE = np.mean(self.prev_RegionSnotel[region]['SWE'][self.prev_RegionSnotel[region]['SWE']>0])
+        prev_meanSWE = np.mean(self.prev_RegionSnotel[region]['SWE'][self.prev_RegionSnotel[region]['SWE']>=0])
+        #print(region, prev_meanSWE)
+        #add if statement to meanSWE
+        if prev_meanSWE < 0.15:
+            prev_meanSWE = 0
         self.prev_RegionSnotel[region]['SWE'][self.prev_RegionSnotel[region]['SWE']<0]= prev_meanSWE
 
-        delta = self.RegionSnotel[region]['SWE']-self.prev_RegionSnotel[region]['SWE']
-        delta = pd.DataFrame(delta)
-        delta = delta.rename(columns = {'SWE':'Delta'})
+#        delta = self.RegionSnotel[region]['SWE']-self.prev_RegionSnotel[region]['SWE']
+#        delta = pd.DataFrame(delta)
+#        delta = delta.rename(columns = {'SWE':'Delta'})
 
         #get values that are not affected by NA
-        delta = delta[delta['Delta']> -9000]
+#        delta = delta[delta['Delta']> -9000]
 
         #Get mean Delta to adjust observed SWE
-        meanD = np.mean(delta['Delta'])
+#        meanD = np.mean(delta['Delta'])
 
         #go and fix current SWE observations
         #Get bad obsevations and snotel sites
-        badSWE_df = self.RegionSnotel[region][self.RegionSnotel[region]['SWE']< 0].copy()
-        bad_sites = list(badSWE_df.index)
+#        badSWE_df = self.RegionSnotel[region][self.RegionSnotel[region]['SWE']< 0].copy()
+#        bad_sites = list(badSWE_df.index)
 
 
         #remove bad observations from SWE obsevations
-        self.RegionSnotel[region] = self.RegionSnotel[region][self.RegionSnotel[region]['SWE'] >= 0]
+#        self.RegionSnotel[region] = self.RegionSnotel[region][self.RegionSnotel[region]['SWE'] >= 0]
 
         #Fix bad observatoins by taking previous obs +/- mean delta SWE
-        print('Fixing these bad sites in ', region, ':')
-        for badsite in bad_sites:
-            print(badsite)
-            badSWE_df.loc[badsite,'SWE']=self.prev_RegionSnotel[region].loc[badsite]['SWE'] + meanD
+       # print('Fixing these bad sites in ', region, ':')
+#        for badsite in bad_sites:
+ #           print(badsite)
+  #          badSWE_df.loc[badsite,'SWE']=self.prev_RegionSnotel[region].loc[badsite]['SWE'] + meanD
 
         #Add observations back to DF
-        self.RegionSnotel[region] = pd.concat([self.RegionSnotel[region], badSWE_df])
+#        self.RegionSnotel[region] = pd.concat([self.RegionSnotel[region], badSWE_df])
 
 
     #Take in and make prediction
@@ -687,24 +862,24 @@ class SWE_Prediction():
         
         #self.plot = plot
         #load first SWE observation forecasting dataset with prev and delta swe for observations. 
-        path = self.cwd+'/Data/Processed/ValidationDF_'+self.date + '.pkl'
+        path = self.cwd+'/Data/Processed/Prediction_DF_'+self.date + '.pkl'
 
 
         #load regionalized forecast data
         self.Forecast = open(path, "rb")
 
         self.Forecast = pickle.load(self.Forecast)
-
+       
 
 
 
         #load RFE optimized features
         self.Region_optfeatures= pickle.load(open(self.cwd+"/Model/Prev_SWE_Models_Final/opt_features_prevSWE.pkl", "rb"))
-
+        
 
         #Reorder regions
         self.Forecast = {k: self.Forecast[k] for k in self.Region_list}
-
+        
 
         #Make and save predictions for each reagion
         self.Prev_df = pd.DataFrame()
@@ -724,7 +899,7 @@ class SWE_Prediction():
             self.predictions[Region].to_hdf(self.cwd+'/Predictions/predictions'+self.date+'.h5', key = Region)
 
 
-        #load submission DF and add predictions
+        #load submission DF and add predictions, if locations are removed or added, this needs to be modified
         self.subdf = pd.read_csv(self.cwd+'/Predictions/submission_format_'+self.prevdate+'.csv')
         self.subdf.index = list(self.subdf.iloc[:,0].values)
         self.subdf = self.subdf.iloc[:,1:]
@@ -775,9 +950,10 @@ class SWE_Prediction():
 
          #make predictions and rescale
         y_forecast = (model.predict(x_forecast))
-
         y_forecast[y_forecast < 0 ] = 0
         y_forecast = (SWEmax * y_forecast)
+        #remove forecasts less than 0.5 inches SWE
+        y_forecast[y_forecast < 0.5 ] = 0
         self.Forecast[Region][self.date] = y_forecast
          
 
@@ -1083,8 +1259,122 @@ class SWE_Prediction():
         if plot == True:
             print('Plotting results')
             self.plot_netCDF()
+            
+            
+            #https://unidata.github.io/netcdf4-python/
+    def netCDF_compressed(self, plot):
 
-        
+       #get all SWE regions data into one DF
+
+        self.NA_SWE = pd.DataFrame()
+        columns = ['Long', 'Lat', 'elevation_m', 'northness', self.date]
+
+        for region in self.Forecast:
+            self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
+
+        self.NA_SWE = self.NA_SWE.rename(columns = {self.date:'SWE'})
+
+
+        #round to 2 decimals
+        self.NA_SWE['Lat'] = round(self.NA_SWE['Lat'],2)
+        self.NA_SWE['Long'] = round(self.NA_SWE['Long'],2)
+
+        #NA_SWE = NA_SWE.set_index('Date')
+
+        #Get the range of lat/long to put into xarray
+        self.lonrange = np.arange(-124.75, -66.95, 0.01)
+        self.latrange = np.arange(25.52, 49.39, 0.01)
+
+        self.lonrange = [round(num, 2) for num in self.lonrange]
+        self.latrange = [round(num, 2) for num in self.latrange]
+
+         #Make grid of lat long
+        FG = self.expand_grid(self.latrange, self.lonrange)
+
+        #Merge SWE predictions with gridded df
+        self.DFG = pd.merge(FG, self.NA_SWE, on = ['Long','Lat'], how = 'left')
+
+        #drop duplicate lat/long
+        self.DFG = self.DFG.drop_duplicates(subset = ['Long', 'Lat'], keep = 'last').reset_index(drop = True)
+
+        #fill NaN values with 0
+        #self.DFG['SWE'] = self.DFG['SWE'].fillna(0)
+
+        #Reshape DFG DF
+        self.SWE_array = self.DFG['SWE'].values.reshape(1,len(self.latrange),len(self.lonrange))
+
+        # create nc filepath
+        fn = self.cwd +'/Data/NetCDF/SWE_'+self.date+'_compressed.nc'
+
+        # make nc file, set lat/long, time
+        ncfile  = nc.Dataset(fn, 'w', format = 'NETCDF4')
+        print(ncfile)
+
+        #Create ncfile group
+        grp1 = ncfile.createGroup('SWE_1-km')
+
+        for grp in ncfile.groups.items():
+            print(grp)
+
+
+        lat = ncfile.createDimension('lat', len(self.latrange))
+        lon = ncfile.createDimension('lon', len(self.lonrange)) 
+        time = ncfile.createDimension('time', None)
+
+        #make nc file metadata
+        grp1.title = 'SWE interpolation for ' + self.date
+
+        lat = ncfile.createVariable('lat', np.float32, ('lat',))
+        lat.units = 'degrees_north'
+        lat.long_name = 'latitude'
+
+        lon = ncfile.createVariable('lon', np.float32, ('lon',))
+        lon.units = 'degrees_east'
+        lon.long_name = 'longitude'
+
+        time = ncfile.createVariable('time', np.float64, ('time',))
+        time.units = 'hours since 1800-01-01'
+        time.long_name = 'time'
+
+        SWE = grp1.createVariable('SWE', np.float64, ('time', 'lat', 'lon'), zlib = True)
+        for grp in ncfile.groups.items():
+            print(grp)
+
+        SWE.units = 'inches'
+        SWE.standard_name = 'snow_water_equivalent'
+        SWE.long_name = 'Interpolated SWE product @1-km'
+
+        #add projection information
+        proj = osr.SpatialReference()
+        proj.ImportFromEPSG(4326) # GCS_WGS_1984
+        SWE.esri_pe_string = proj.ExportToWkt()
+
+        #set lat lon info in file
+        SWE.coordinates = 'lon lat'
+
+
+        # Write latitudes, longitudes.
+        lat[:] = self.latrange
+        lon[:] = self.lonrange
+       
+
+        # Write the data.  This writes the whole 3D netCDF variable all at once.
+        SWE[:,:,:] = self.SWE_array 
+
+        #Set date/time information
+        times_arr = time[:]
+        dates = [dt.datetime(int(self.date[0:4]),int(self.date[5:7]),int(self.date[8:]),0)]
+        times = date2num(dates, time.units)
+        time[:] = times
+
+        print(ncfile)
+        ncfile.close()
+        print('File conversion to netcdf complete')
+
+        if plot == True:
+            print('Plotting results')
+            self.plot_netCDF()
+
            
         
     def plot_netCDF(self):
@@ -1151,7 +1441,7 @@ class SWE_Prediction():
         
         
         #load file
-        fn = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+ self.date+'_CONUS.nc'
+        fn = self.cwd +'/Data/NetCDF/SWE_'+self.date+'_compressed.nc'
         
         #open netcdf file with rioxarray
         xr = rxr.open_rasterio(fn)
@@ -1215,7 +1505,8 @@ class SWE_Prediction():
 
      #produce an interactive plot using Folium
     def plot_interactive_SWE(self, pinlat, pinlong, web):
-        fnConus = self.cwd +'/Data/NetCDF/SWE_MAP_1km_'+self.date+'_CONUS.nc'
+        print('loading file')
+        fnConus = self.cwd +'/Data/NetCDF/SWE_'+self.date+'_compressed.nc'
 
         #xr = rxr.open_rasterio(fn)
         xrConus = rxr.open_rasterio(fnConus)
@@ -1288,4 +1579,445 @@ class SWE_Prediction():
             
         xrConus.close()
         
+        
+   
+    def Geo_df(self):
+        print('loading file')
+        fnConus = self.cwd +'/Data/NetCDF/SWE_'+self.date+'_compressed.nc'
+
+       #requires the netCDF4 package rather than rioxarray
+        xrConus = nc.Dataset(fnConus)
+        
+        #Convert rxr df to geodataframe
+        x, y, SWE = xrConus.variables['lon'][:], xrConus.variables['lat'][:], xrConus.groups['SWE_1-km']['SWE'][:]
+        x, y = np.meshgrid(x, y)
+        x, y, SWE = x.flatten(), y.flatten(), SWE.flatten()
+        SWE = np.ma.masked_invalid(SWE).filled(0)
+
+        print("Converting to GeoDataFrame...")
+        SWE_pd = pd.DataFrame.from_dict({'SWE': SWE, 'x': x, 'y': y})
+        SWE_threshold = 0.1
+        SWE_pd = SWE_pd[SWE_pd['SWE'] > SWE_threshold]
+        SWE_gdf = gpd.GeoDataFrame(
+            SWE_pd, geometry=gpd.points_from_xy(SWE_pd.x, SWE_pd.y), crs=4326)
+
+        SWE_gdf.geometry = SWE_gdf.geometry.buffer(0.01, cap_style=3)
+        SWE_gdf.geometry = SWE_gdf.geometry.to_crs(epsg= 4326)
+
+        SWE_gdf =  SWE_gdf.reset_index(drop = True)
+        SWE_gdf['geoid'] = SWE_gdf.index.astype(str)
+        Chorocols = ['geoid', 'SWE', 'geometry']
+        self.SWE_gdf = SWE_gdf[Chorocols]
+        self.SWE_gdf.crs = CRS.from_epsg(4326)
+        
+        xrConus.close()
+        
+     #produce an interactive plot using Folium
+    def plot_interactive_SWE_comp(self, pinlat, pinlong, web):
+        self.Geo_df()
+        
+        try:
+            print('File conversion complete, creating mapping instance')
+            # Create a Map instance
+            m = folium.Map(location=[pinlat, pinlong], tiles = 'Stamen Terrain', zoom_start=10, 
+                           control_scale=True)
+
+            # Plot a choropleth map
+            # Notice: 'geoid' column that we created earlier needs to be assigned always as the first column
+            folium.Choropleth(
+                geo_data=self.SWE_gdf,
+                name='SWE estimates',
+                data=self.SWE_gdf,
+                columns=['geoid', 'SWE'],
+                key_on='feature.id',
+                fill_color='YlGnBu_r',
+                fill_opacity=0.7,
+                line_opacity=0.2,
+                line_color='white', 
+                line_weight=0,
+                highlight=False, 
+                smooth_factor=1.0,
+                #threshold_scale=[100, 250, 500, 1000, 2000],
+                legend_name= 'SWE in inches for '+ self.date).add_to(m)
+
+            # Convert points to GeoJson
+            folium.features.GeoJson(self.SWE_gdf,  
+                                    name='Snow Water Equivalent',
+                                    style_function=lambda x: {'color':'transparent','fillColor':'transparent','weight':0},
+                                    tooltip=folium.features.GeoJsonTooltip(fields=['SWE'],
+                                                                            aliases = ['Snow Water Equivalent (in) for '+ self.date+ ':'],
+                                                                            labels=True,
+                                                                            sticky=True,
+                                                                             localize=True
+                                                                                        )
+                                   ).add_to(m)
+
+
+             #code for webbrowser app
+
+            if web == True:
+                output_file =  self.cwd +'/Data/NetCDF/SWE_'+self.date+'_Interactive.html'
+                m.save(output_file)
+                webbrowser.open(output_file, new=2)
+
+            else:
+                display(m)
+
+        except IndexError:
+            print("No modeled SWE")
+        
+
+    #Get a list of HUCs with snow    
+    def huc_list(self, huc):
+        West_HU = ['HU10', 'HU11' ,'HU13' ,'HU14' ,'HU15' ,'HU16' ,'HU17' ,'HU18']
+        HUC_list = []
+
+        for i in West_HU:
+
+            HUC = self.HUC_SWE_read(i, huc)
+
+            HUC_list = HUC_list + [int(i) for i in HUC]
+
+        self.HUC_list = [int(i) for i in HUC_list]
+        
+    def get_HUC_Info(self, HUC):
+    
+        HUC_df = pd.DataFrame()
+
+        print('Retrieving HUC watershed boundary geodataframes.')
+
+        pbar = ProgressBar()
+        for i in pbar(np.arange(0,len(HUC),1)):
+            HUC[i] = str(HUC[i])
+
+            #if len(HUC[i]) % 2 == 0:
+
+            HU = HUC[i][:2]
+
+            HUC_len = len(HUC[i])
+
+            #else:
+             #   HU = '0' + HUC[i][:1]
+            #
+             #   HUC_len = len(HUC[i])+1
+
+
+
+            HUCunit = 'WBDHU'+ str(HUC_len)
+
+            HUCunit2 = 'huc'+str(HUC_len)
+
+            gdb_file = self.cwd+'/Data/WBD//WBD_' +HU+'_HU2_GDB/WBD_'+HU+'_HU2_GDB.gdb'
+
+            # Get HUC unit from the .gdb file 
+
+            H = gpd.read_file(gdb_file,layer=HUCunit)
+
+
+            h = H[H[HUCunit2]==HUC[i]]
+            HUC_df = HUC_df.append(h)
+        HUC_df.reset_index(inplace = True, drop = True)
+        #display(HUC_df)
+        return HUC_df
+        
+        
+        
+    #These HUCS contain SWE    
+    def HUC_SWE_read(self, HU, HUC):
+        H = h5py.File(self.cwd+'/Data/WBD/WBD_HUC_SWE.h5','r')
+        H_SWE = H[HU]['HUC8'][:].tolist()
+        H_SWE= [str(i) for i in H_SWE]
+        H.close()
+        return H_SWE
+    
+    
+    #This is just a function to identify key sites, not used in operations
+    def HUC_SWE(df, HU, HUC):
+        print('Saving Key HUCs containing SWE to speed up spatial aggregation of geodataframes')
+        HU_wSWE = list(df['geoid'])
+        HU_wSWE = [int(i) for i in HU_wSWE]
+        f = h5py.File(cwd+'/Data/WBD/WBD_HUC_SWE.h5','a')
+        HU10 = f.create_group(HU)
+        HUC8 = HU10.create_dataset(HUC, data = HU_wSWE)
+        f.close()
+        
+   #This function gets all of the HUCs for a list of HUs at a specified level, ie HU09:HU11 at huc8 '8'
+    def get_HU_sites(HU, HU_level):
+
+        HUs = pd.DataFrame()
+        HUCunit = 'WBDHU'+ HU_level
+        HU_level = 'huc'+HU_level
+
+        #for i in np.arange(0,len(HU),1):
+
+
+        gdb_file = cwd+'/Data/WBD//WBD_' +HU[2:] +'_HU2_GDB/WBD_'+HU[2:]+'_HU2_GDB.gdb'
+
+        # Get HUC unit from the .gdb file 
+
+        H = gpd.read_file(gdb_file,layer=HUCunit)
+
+        HUs = HUs.append(pd.DataFrame(H[HU_level]))
+
+        HUs = list(HUs['huc8'])
+
+        HUs = [int(i) for i in HUs]
+
+        return HUs
+    
+    '''
+    Use the below code interactively to identify the HUCs with SWE
+    '''
+    #f = h5py.File(cwd+'/Data/WBD/WBD_HUC_SWE.h5','w')
+    #f.close()
+
+    #West_HU = ['HU10', 'HU11' ,'HU13' ,'HU14' ,'HU15' ,'HU16' ,'HU17' ,'HU18']
+
+    #for HU in West_HU:
+     #   print('Getting ', HU, ' HUCs')
+      #  West_HU_huc8 = get_HU_sites(HU, '8')
+       # HUC_SWE_mean = get_Mean_HUC_SWE(West_HU_huc8, Snow.SWE_gdf)
+        #HUC_SWE(HUC_SWE_mean, HU , 'HUC8')
+
+    
+    #Get mean swe per HUC and convert to GeoDataFrame
+    def get_Mean_HUC_SWE(self):
+    
+        self.SWE_gdf['centroid'] = self.SWE_gdf['geometry'].centroid
+        HUC_df = self.get_HUC_Info(self.HUC_list)
+
+        HUC_SWE_df = pd.DataFrame()
+
+        print('Calculating mean SWE per HUC')
+
+        pbar = ProgressBar()
+        for i in pbar(np.arange(0,len(HUC_df),1)):
+
+            HU = self.HUC_list[i][:2]
+
+            HUC_len = len(self.HUC_list[i])
+
+            HUCunit2 = 'huc'+str(HUC_len)
+
+            huc = gpd.GeoDataFrame(pd.DataFrame(HUC_df.iloc[i]).T)        
+            joined = gpd.sjoin(left_df=huc, right_df=self.SWE_gdf, how='left')
+            #print(joined.columns)
+
+            #display(HUC[i])
+            HUC_SWE = joined[joined[HUCunit2] == str(self.HUC_list[i])]
+
+            HUC_SWE_mean = HUC_SWE.copy()
+
+            HUC_SWE_mean['Mean_SWE'] = np.mean(HUC_SWE_mean['SWE'])
+
+            del HUC_SWE_mean['SWE']
+
+            HUC_SWE_mean['geoid'] = self.HUC_list[i]
+
+            HUC_mean_cols = ['geoid', 'Mean_SWE', 'geometry']
+
+            HUC_SWE_mean = HUC_SWE_mean[HUC_mean_cols].drop_duplicates()
+
+            HUC_SWE_df = HUC_SWE_df.append(HUC_SWE_mean)
+
+        HUC_SWE_df.crs = "EPSG:4326"
+
+        HUC_SWE_df.dropna(inplace = True)
+
+        self.HUC_SWE_df = HUC_SWE_df
+        
+        
+
+
+        print("Converting to GeoDataFrame...")
+        target = 'Mean_SWE'
+        self.HUC_SWE_df.geometry = self.HUC_SWE_df.geometry.to_crs(epsg= 4326)
+
+        self.HUC_SWE_df =  self.HUC_SWE_df.reset_index(drop = True)
+        #SWE_gdf['geoid'] = SWE_gdf.index.astype(str)
+        Chorocols = ['geoid', target, 'geometry']
+        self.HUC_SWE_df = self.HUC_SWE_df[Chorocols]
+        self.HUC_SWE_df.crs = CRS.from_epsg(4326)
+        
+     
+    def trunc(self, values, decs=0):
+        return np.trunc(values*10**decs)/(10**decs)
+        
+        
+        
+    def GeoDF_HUC_NetCDF_compressed(self):
+        print('Geodataframe conversion')
+        #make point for all USA
+        #Get the range of lat/long to put into xarray
+        lonrange = np.arange(-124.75, -66.95, 0.01)
+        latrange = np.arange(25.52, 49.39, 0.01)
+
+        lonrange = [round(num, 2) for num in lonrange]
+        latrange = [round(num, 2) for num in latrange]
+
+         #Make grid of lat long
+        FG = self.expand_grid(latrange, lonrange)
+
+        GFG = gpd.GeoDataFrame(FG, geometry = gpd.points_from_xy(FG.Long, FG.Lat))
+
+        #merge multipoint with point
+        GFGjoin = GFG.sjoin(self.HUC_SWE_df, how ='inner', predicate = 'intersects')
+
+        #Select key columns
+        cols = ['Long', 'Lat', 'geoid', 'Mean_SWE']
+        MSWE = GFGjoin[cols]
+
+        #Merge SWE predictions with gridded df
+        DFG = pd.merge(FG, MSWE, on = ['Long','Lat'], how = 'left')
+
+        #drop duplicate lat/long
+        DFG = DFG.drop_duplicates(subset = ['Long', 'Lat'], keep = 'last').reset_index(drop = True)
+
+
+        #Reshape DFG DF
+        SWE_array = DFG['Mean_SWE'].values.reshape(1,len(latrange),len(lonrange))
+
+        # create nc filepath
+        fn = self.cwd +'/Data/NetCDF/SWE_'+self.date+'_compressed.nc'
+        print('Setting up NetCDF4')
+        # make nc file, set lat/long, time
+        ncfile  = nc.Dataset(fn, 'a', format = 'NETCDF4')
+        
+        #Create ncfile group
+        grp2 = ncfile.createGroup('HUC8')
+
+        #for grp in ncfile.groups.items():
+         #   print(grp)
+
+
+       # lat = ncfile.createDimension('lat', len(latrange))
+       # lon = ncfile.createDimension('lon', len(lonrange)) 
+        #time = ncfile.createDimension('time', None)
+
+        #make nc file metadata
+        grp2.title = 'HUC SWE estimate for ' + self.date
+
+        #lat = ncfile.createVariable('lat', np.float32, ('lat',))
+        #lat.units = 'degrees_north'
+        #lat.long_name = 'latitude'
+
+        #lon = ncfile.createVariable('lon', np.float32, ('lon',))
+        #lon.units = 'degrees_east'
+        #lon.long_name = 'longitude'
+
+        #time = ncfile.createVariable('time', np.float64, ('time',))
+        #time.units = 'hours since 1800-01-01'
+        #time.long_name = 'time'
+
+        Mean_SWE = grp2.createVariable('Mean_SWE', np.float64, ('time', 'lat', 'lon'), zlib = True)
+        for grp in ncfile.groups.items():
+            print(grp)
+
+        Mean_SWE.units = 'inches'
+        Mean_SWE.standard_name = 'snow_water_equivalent'
+        Mean_SWE.long_name = 'Mean SWE product HUC8'
+
+        #add projection information
+        proj = osr.SpatialReference()
+        proj.ImportFromEPSG(4326) # GCS_WGS_1984
+        Mean_SWE.esri_pe_string = proj.ExportToWkt()
+
+        #set lat lon info in file
+        Mean_SWE.coordinates = 'lon lat'
+
+
+        # Write latitudes, longitudes.
+       # lat[:] = latrange
+        #lon[:] = lonrange
+
+
+        # Write the data.  This writes the whole 3D netCDF variable all at once.
+        Mean_SWE[:,:,:] = SWE_array 
+
+        #Set date/time information
+        #times_arr = time[:]
+        #dates = [dt.datetime(int(self.date[0:4]),int(self.date[5:7]),int(self.date[8:]),0)]
+
+        #times = date2num(dates, time.units)
+        #time[:] = times
+
+        print(ncfile)
+        ncfile.close()
+        print('File conversion to netcdf complete')
+
+
+
+    def plot_interactive_SWE_comp_HUC(self, pinlat, pinlong, web):
+        target = 'Mean_SWE'
+
+        SWE_gdf = self.HUC_SWE_df
+
+        print("Converting to GeoDataFrame...")
+        SWE_gdf.geometry = SWE_gdf.geometry.to_crs(epsg= 4326)
+
+        SWE_gdf =  SWE_gdf.reset_index(drop = True)
+        #SWE_gdf['geoid'] = SWE_gdf.index.astype(str)
+        Chorocols = ['geoid', target, 'geometry']
+        SWE_gdf = SWE_gdf[Chorocols]
+        SWE_gdf.crs = CRS.from_epsg(4326)
+
+
+        print('File conversion complete, creating mapping instance')
+        # Create a Map instance
+        m = folium.Map(location=[pinlat, pinlong], tiles = 'Stamen Terrain', zoom_start=8, 
+                       control_scale=True)
+        print('Map made, creating choropeth')
+
+        # Plot a choropleth map
+        # Notice: 'geoid' column that we created earlier needs to be assigned always as the first column
+        folium.Choropleth(
+            geo_data=SWE_gdf,
+            name='SWE estimates',
+            data=SWE_gdf,
+            columns=['geoid', target],
+            key_on='feature.properties.geoid',
+            fill_color='YlGnBu_r',
+            fill_opacity=0.7,
+            line_opacity=0.1,
+            line_color='black', 
+            line_weight=1,
+            highlight=False, 
+            smooth_factor=1.0,
+            #threshold_scale=[100, 250, 500, 1000, 2000],
+            legend_name= 'SWE in inches for '+ self.date).add_to(m)
+
+        print('Choropeth complete, adding features')
+
+        # Convert points to GeoJson
+        folium.features.GeoJson(SWE_gdf,  
+                                name='Snow Water Equivalent',
+                                style_function=lambda x: {'color':'transparent','fillColor':'transparent','weight':0},
+                                tooltip=folium.features.GeoJsonTooltip(fields=[target],
+                                                                        aliases = ['Snow Water Equivalent (in) for '+ self.date+ ':'],
+                                                                        labels=True,
+                                                                        sticky=True,
+                                                                         localize=True
+                                                                                    )
+                               ).add_to(m)
+
+        print('map made, saving and deploying')
+
+         #code for webbrowser app
+        #self.SWE_gdf = SWE_gdf
+        #if web == True:
+        output_file =  self.cwd +'/Data/NetCDF/HUC8_Mean_SWE_'+self.date+'_HUC8.html'
+        m.save(output_file)
+        webbrowser.open(output_file, new=2)
+
+
+
+
+
+
+
+
+
+
+
+
 
