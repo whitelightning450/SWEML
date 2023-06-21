@@ -1,4 +1,5 @@
-
+.env
+.credentials
 .DS_Store
 
 Model/__pycache__/
