@@ -594,7 +594,7 @@ class SWE_Prediction():
         path = self.cwd + '/Data/Processed/Region_Pred.pkl'
         # load regionalized geospatial data
         self.RegionTest = open(path, "rb")
-        self.RegionTest = pickle.load(self.RegionTest)
+        self.RegionTest = pd.read_pickle(self.RegionTest)
 
         ### Load H5 previous prediction files into dictionary
 
