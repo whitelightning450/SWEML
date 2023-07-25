@@ -23,12 +23,12 @@ class Region_SWE_Simulation:
     """
     This class contains the necessary functions to run historical and up-to-date SWE simulations for a given shapefile region.
     Args:
-        cwd (str): current working diectory. This should be the "Model" directory, along with the National_Snow_Model_Regional.py file.
+        cwd (str): current working directory. This should be the "National-Snow-Model" directory.
         area (str): Name of the region to model. This should exactly match the name of the shapefile.
         year (str): 'YYYY' - Starting year of the Water Year to be modeled.
         shapefile_path (str): Path of the area shapefile.
         start_date (str): 'YYYY-MM-DD' - First date of model inference. If Regional_predict has not been executed before, this must be 'YYYY-10-01'.
-        end_date (str): 'YYYY-MM-DD' - Final date of model infernce. 
+        end_date (str): 'YYYY-MM-DD' - Final date of model inference. 
         day_interval (int): Default = 7 days. Interval between model inferences. If changed, initial start_date must be 'YYYY-09-24' + interval
         plot (boolean): Default =True. Plot interactive map of modeled region SWE inline. Suggest setting False to improve speed and performance. 
     """ 
