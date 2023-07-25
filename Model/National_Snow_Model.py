@@ -64,10 +64,10 @@ warnings.filterwarnings("ignore")
 
 
 class SWE_Prediction():
-    def __init__(self, cwd, date):
-        self = self
+    def __init__(self, cwd, date, delta=7):
         self.date = date
-        self.prevdate = pd.to_datetime(date) - timedelta(days=7)
+        self.delta = delta
+        self.prevdate = pd.to_datetime(date) - timedelta(days=delta)
         self.prevdate = self.prevdate.strftime('%Y-%m-%d')
 
         # set path directory
@@ -325,7 +325,7 @@ class SWE_Prediction():
 
 
         except:
-            print('Unable to fetch SWE data for site ', sitecode, 'SWE value: -9999')
+            # print('Unable to fetch SWE data for site ', sitecode, 'SWE value: -9999')
             end_date = end_date.strftime('%Y-%m-%d')
             SNOTEL_SWE = pd.DataFrame(-9999, columns=['station_id', end_date], index=[1])
             SNOTEL_SWE['station_id'] = sitecode
@@ -347,7 +347,7 @@ class SWE_Prediction():
             CDEC_SWE = CDEC_SWE.rename(columns={'SNOW WC INCHES': end_date})
 
         except:
-            print('Unable to fetch SWE data for site ', station_id, 'SWE value: -9999')
+            # print('Unable to fetch SWE data for site ', station_id, 'SWE value: -9999')
             CDEC_SWE = pd.DataFrame(-9999, columns=['station_id', end_date], index=[1])
             CDEC_SWE['station_id'] = 'CDEC:' + station_id
             CDEC_SWE = CDEC_SWE.set_index('station_id')
@@ -379,7 +379,7 @@ class SWE_Prediction():
 
         print('Getting California Data Exchange Center SWE data from sites: ')
         for site in self.CDECsites:
-            print(site)
+            # print(site)
             CDEC = self.get_CDEC(site, sensor_id, resolution, start_date, date.strftime('%Y-%m-%d'))
             frames = [SWE_df, CDEC]
             SWE_df = pd.concat(frames)
@@ -392,7 +392,7 @@ class SWE_Prediction():
 
         print('Getting NRCS SNOTEL SWE data from sites: ')
         for site in self.Snotelsites:
-            print(site)
+            # print(site)
             Snotel = self.get_SNOTEL(site, start_date, date)
             frames = [SWE_df, Snotel]
             SWE_df = pd.concat(frames)
@@ -450,8 +450,8 @@ class SWE_Prediction():
             # SNOTEL_SWE = SNOTEL_SWE[col].iloc[-1:]
             self.SWE_df[self.date].loc[sitecode] = SNOTEL_SWE['value'].values[0]
 
-        except:
-            print('Unable to fetch SWE data for site ', sitecode, 'SWE value: -9999')
+        except Exception as e:
+            # print('Unable to fetch SWE data for site ', sitecode, 'SWE value: -9999')
             # end_date=end_date.strftime('%Y-%m-%d')
             # SNOTEL_SWE = pd.DataFrame(-9999, columns = ['station_id', end_date], index =[1])
             # SNOTEL_SWE['station_id'] = sitecode
@@ -478,7 +478,7 @@ class SWE_Prediction():
             self.SWE_df[self.date].loc[CDEC_station_id] = CDEC_SWE[end_date].values[0]
 
         except:
-            print('Unable to fetch SWE data for site ', station_id, 'SWE value: -9999')
+            # print('Unable to fetch SWE data for site ', station_id, 'SWE value: -9999')
             CDEC_SWE = pd.DataFrame(-9999, columns=['station_id', end_date], index=[1])
             CDEC_station_id = 'CDEC:' + station_id
             CDEC_SWE['station_id'] = CDEC_station_id
@@ -525,7 +525,7 @@ class SWE_Prediction():
 
         # create new threads and append them to the list of threads
         for site in self.CDECsites:
-            print(site)
+            # print(site)
             # functions with arguments must have an 'empty' arg at the end of the passed 'args' tuple
             t = threading.Thread(target=self.get_CDEC_Threaded,
                                  args=(site, sensor_id, resolution, start_date, date.strftime('%Y-%m-%d')))
@@ -544,7 +544,7 @@ class SWE_Prediction():
 
         # create new threads and append them to the list of threads
         for site in self.Snotelsites:
-            print(site)
+            # print(site)
             # functions with arguments must have an 'empty' arg at the end of the passed 'args' tuple
             t = threading.Thread(target=self.get_SNOTEL_Threaded, args=(site, start_date, date))
             threads.append(t)
@@ -575,7 +575,8 @@ class SWE_Prediction():
         self.SWE_df = self.SWE_df.rename(columns={'index': 'station_id'})
         self.SWE_df = self.SWE_df.set_index('station_id')
 
-        self.SWE_df.to_csv(self.cwd + '\Data\Pre_Processed_DA\ground_measures_features_' + date + '.csv')
+        self.SWE_df.to_csv(self.cwd + '/Data/Pre_Processed_DA/ground_measures_features_' + date + '.csv')
+        # print("saved to:", self.cwd + '/Data/Pre_Processed_DA/ground_measures_features_' + date + '.csv')
 
     # Data Assimilation script, takes date and processes to run model.
     def Data_Processing(self):
@@ -591,7 +592,7 @@ class SWE_Prediction():
         self.GM_Prev = self.GM_Prev.drop(columns=colrem)
 
         # All coordinates of 1 km polygon used to develop ave elevation, ave slope, ave aspect
-        path = self.cwd + '/Data/Processed/Region_Pred.pkl'
+        path = self.cwd + '/Data/Processed/RegionVal.pkl'  # TODO change to RegionVals?
         # load regionalized geospatial data
         self.RegionTest = open(path, "rb")
         self.RegionTest = pd.read_pickle(self.RegionTest)
@@ -665,7 +666,8 @@ class SWE_Prediction():
                 'Prev_SWE']
 
             # make dataframe to function as next forecasts GM_Prev
-            self.Future_GM_Pred = self.Future_GM_Pred.append(self.RegionSnotel[region])
+            self.Future_GM_Pred = pd.concat([self.Future_GM_Pred, self.RegionSnotel[region]])  # use pd.concat for pandas > 2.0
+            # self.Future_GM_Pred = self.Future_GM_Pred.append(self.RegionSnotel[region])
 
         # Need to save 'updated non-na' df's
         GM_path = self.cwd + '/Data/Processed/DA_ground_measures_features_' + self.date + '.csv'
@@ -713,8 +715,9 @@ class SWE_Prediction():
 
             for S in self.RegionTest[snotels].keys():
                 # print(S)
-                self.RegionTest[snotels][S] = self.RegionTest[snotels][S].append(
-                    [self.RegionTest[snotels][S]] * sitelen, ignore_index=True)
+
+                self.RegionTest[snotels][S] = pd.concat([self.RegionTest[snotels][S], pd.DataFrame([self.RegionTest[snotels][S].iloc[0]] * sitelen)], ignore_index=True)  #pandas 2.0 update
+                # self.RegionTest[snotels][S] = self.RegionTest[snotels][S].append([self.RegionTest[snotels][S]] * sitelen, ignore_index=True)
                 self.RegionTest[snotels][S].index = sites
                 self.RegionTest[R] = pd.concat(
                     [self.RegionTest[R], self.RegionTest[snotels][S].reindex(self.RegionTest[R].index)], axis=1)
@@ -759,7 +762,7 @@ class SWE_Prediction():
 
             WY_start = pd.to_datetime(str(y) + '-10-01')
             deltaday = self.RegionTest[region]['Date'][i] - WY_start
-            deltaweek = round(deltaday.days / 7)
+            deltaweek = round(deltaday.days / 7)  # TODO remove hardcoded 7
             weeklist.append(deltaweek)
 
         self.RegionTest[region]['WYWeek'] = weeklist
@@ -813,6 +816,7 @@ class SWE_Prediction():
 
         # self.plot = plot
         # load first SWE observation forecasting dataset with prev and delta swe for observations.
+
         path = self.cwd + '/Data/Processed/Prediction_DF_' + self.date + '.pkl'
 
         # load regionalized forecast data
@@ -827,7 +831,7 @@ class SWE_Prediction():
         # Reorder regions
         self.Forecast = {k: self.Forecast[k] for k in self.Region_list}
 
-        # Make and save predictions for each reagion
+        # Make and save predictions for each region
         self.Prev_df = pd.DataFrame()
         self.predictions = {}
         print('Making predictions for: ', self.date)
@@ -839,7 +843,8 @@ class SWE_Prediction():
 
             #  if self.plot == True:
             #     del self.predictions[Region]['geometry']
-            self.Prev_df = self.Prev_df.append(pd.DataFrame(self.predictions[Region][self.date]))
+            self.Prev_df = pd.concat([self.Prev_df, self.predictions[Region][[self.date]]])  # pandas 2.0 update
+            # self.Prev_df = self.Prev_df.append(pd.DataFrame(self.predictions[Region][self.date]))
             self.Prev_df = pd.DataFrame(self.Prev_df)
 
             self.predictions[Region].to_hdf(self.cwd + '/Predictions/predictions' + self.date + '.h5', key=Region)
@@ -847,7 +852,7 @@ class SWE_Prediction():
         # load submission DF and add predictions, if locations are removed or added, this needs to be modified
         self.subdf = pd.read_csv(self.cwd + '/Predictions/submission_format_' + self.prevdate + '.csv')
         self.subdf.index = list(self.subdf.iloc[:, 0].values)
-        self.subdf = self.subdf.iloc[:, 1:]
+        self.subdf = self.subdf.iloc[:, 1:]  # TODO replace with drop("cell_id")
 
         self.sub_index = self.subdf.index
         # reindex predictions
@@ -866,6 +871,8 @@ class SWE_Prediction():
         # Make prediction dataframe
         forecast_data = self.Forecast[Region].copy()
         forecast_data = forecast_data[features]
+
+        # TODO insert SCA df split here?
 
         # change all na values to prevent scaling issues
         forecast_data[forecast_data < -9000] = -10
@@ -942,7 +949,8 @@ class SWE_Prediction():
         columns = ['Long', 'Lat', 'elevation_m', 'northness', self.date]
 
         for region in self.Forecast:
-            self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
+            self.NA_SWE = pd.concat([self.NA_SWE, self.Forecast[region][columns]], ignore_index=True)  # pandas 2.0 update
+            # self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
 
         self.NA_SWE = self.NA_SWE.rename(columns={self.date: 'SWE'})
 
@@ -998,7 +1006,8 @@ class SWE_Prediction():
         columns = ['Long', 'Lat', 'elevation_m', 'northness', self.date]
 
         for region in self.Forecast:
-            self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
+            self.NA_SWE = pd.concat([self.NA_SWE, self.Forecast[region][columns]], ignore_index=True)  # pandas 2.0 update
+            # self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
 
         self.NA_SWE = self.NA_SWE.rename(columns={self.date: 'SWE'})
 
@@ -1096,7 +1105,8 @@ class SWE_Prediction():
         columns = ['Long', 'Lat', 'elevation_m', 'northness', self.date]
 
         for region in self.Forecast:
-            self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
+            self.NA_SWE = pd.concat([self.NA_SWE, self.Forecast[region][columns]], ignore_index=True)  # pandas 2.0 update
+            # self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
 
         self.NA_SWE = self.NA_SWE.rename(columns={self.date: 'SWE'})
 
@@ -1196,7 +1206,8 @@ class SWE_Prediction():
         columns = ['Long', 'Lat', 'elevation_m', 'northness', self.date]
 
         for region in self.Forecast:
-            self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
+            self.NA_SWE = pd.concat([self.NA_SWE, self.Forecast[region][columns]], ignore_index=True)  # pandas 2.0 update
+            # self.NA_SWE = self.NA_SWE.append(self.Forecast[region][columns])
 
         self.NA_SWE = self.NA_SWE.rename(columns={self.date: 'SWE'})
 
@@ -1624,7 +1635,8 @@ class SWE_Prediction():
             H = gpd.read_file(gdb_file, layer=HUCunit)
 
             h = H[H[HUCunit2] == HUC[i]]
-            HUC_df = HUC_df.append(h)
+            HUC_df = pd.concat([HUC_df, h], ignore_index=True)  # pandas 2.0 update
+            # HUC_df = HUC_df.append(h)
         HUC_df.reset_index(inplace=True, drop=True)
         # display(HUC_df)
         return HUC_df
@@ -1662,7 +1674,8 @@ class SWE_Prediction():
 
         H = gpd.read_file(gdb_file, layer=HUCunit)
 
-        HUs = HUs.append(pd.DataFrame(H[HU_level]))
+        HUs = pd.concat([HUs, pd.DataFrame(H[HU_level])], ignore_index=True)  # pandas 2.0 update
+        # HUs = HUs.append(pd.DataFrame(H[HU_level]))
 
         HUs = list(HUs['huc8'])
 
@@ -1722,7 +1735,8 @@ class SWE_Prediction():
 
             HUC_SWE_mean = HUC_SWE_mean[HUC_mean_cols].drop_duplicates()
 
-            HUC_SWE_df = HUC_SWE_df.append(HUC_SWE_mean)
+            HUC_SWE_df = pd.concat([HUC_SWE_df, HUC_SWE_mean], ignore_index=True)  # pandas 2.0 update
+            # HUC_SWE_df = HUC_SWE_df.append(HUC_SWE_mean)
 
         HUC_SWE_df.crs = "EPSG:4326"
 
@@ -1901,3 +1915,129 @@ class SWE_Prediction():
         output_file = self.cwd + '/Data/NetCDF/HUC8_Mean_SWE_' + self.date + '_HUC8.html'
         m.save(output_file)
         webbrowser.open(output_file, new=2)
+
+
+if __name__ == "__main__":
+    import os
+    import National_Snow_Model
+    # import NSM_SCA
+    import pandas as pd
+    import warnings
+
+    warnings.filterwarnings("ignore")
+
+    # set path directory
+    os.getcwd()
+    os.chdir('..')
+    cwd = os.getcwd()
+    cwd
+
+    from datetime import date, timedelta
+
+    # Grab existing files based on water year
+    prev_year = '2018'
+
+    # input the new water year of choice
+    new_year = '2019'
+
+    prev_date = date(int(prev_year), 10, 1)
+    new_date = date(int(new_year), 7, 31)
+
+    # write code for CSV files
+
+    # for h5 files
+    Region_list = ['N_Sierras',
+                   'S_Sierras_High',
+                   'S_Sierras_Low',
+                   'Greater_Yellowstone',
+                   'N_Co_Rockies',
+                   'SW_Mont',
+                   'SW_Co_Rockies',
+                   'GBasin',
+                   'N_Wasatch',
+                   'N_Cascade',
+                   'S_Wasatch',
+                   'SW_Mtns',
+                   'E_WA_N_Id_W_Mont',
+                   'S_Wyoming',
+                   'SE_Co_Rockies',
+                   'Sawtooth',
+                   'Ca_Coast',
+                   'E_Or',
+                   'N_Yellowstone',
+                   'S_Cascade',
+                   'Wa_Coast',
+                   'Greater_Glacier',
+                   'Or_Coast'
+                   ]
+    SWE_new = {}
+    for region in Region_list:
+        # The below file will serve as a starting poinw
+        SWE_new[region] = pd.read_hdf(cwd + '/Predictions/predictions' + prev_year + '-09-24.h5', key=region)
+        SWE_new[region].rename(columns={prev_date: new_date}, inplace=True)
+        SWE_new[region].to_hdf(cwd + '/Predictions/predictions' + new_year + '-09-24.h5', key=region)
+
+
+    # can be altered to create list every n number of days by changing 7 to desired skip length
+    def daterange(start_date, end_date):
+        for n in range(0, int((end_date - start_date).days) + 1, 7):  # TODO replace with self.delta
+            yield start_date + timedelta(n)
+
+
+    # create empty list to store dates
+    datelist = []
+    # define start and end date for list of dates
+    start_dt = prev_date
+    end_dt = new_date
+    # append dates to list
+    for dt in daterange(start_dt, end_dt):
+        # print(dt.strftime("%Y-%m-%d"))
+        dt = dt.strftime('%Y-%m-%d')
+        datelist.append(dt)
+
+    '''
+    Model Spin Up
+    '''
+
+    # Dates
+    # input current and previous weeks dates (these upload csv, must match dates)
+    date = '2018-10-08'
+    # date = pd.to_datetime("today").strftime("%Y-%m-%d")
+
+    # connect interactive script to Wasatch Snow module
+    Snow = National_Snow_Model.SWE_Prediction(cwd, date)
+
+    # %%
+    # Go get SNOTEL observations -- currently saving to csv, change to H5,
+    # dd if self.data < 11-1-2022 and SWE = -9999,
+    # Snow.Get_Monitoring_Data_Threaded()
+
+    # %%
+    # Process observations into Model prediction ready format,
+    # currently requiring me to go in an make all -9999 values 0 (early season)
+    Snow.Data_Processing()
+
+    # %%
+
+    # Sometimes need to run twice for some reason, has a hard time loading the model
+    Snow.SWE_Predict()
+
+    # %%
+    # Make CONUS netCDF file, compressed.
+    Snow.netCDF_compressed(plot=False)
+    #%%
+    # Make GeoDataframe and plot, self.Geo_df() makes the geo df
+    Snow.Geo_df()
+    Snow.plot_interactive_SWE_comp(pinlat=39.1, pinlong=-120, web=True)
+    # %%
+    # Get a list of HUC8 sites containing SWE
+    Snow.huc_list('HUC8')
+
+    # Get the mean SWE for each HUC8
+    Snow.get_Mean_HUC_SWE()
+
+    # Convert Geodataframe to Xarray and save as compressed netCDF4
+    Snow.GeoDF_HUC_NetCDF_compressed()
+
+    # Plot HUC8 SWE
+    Snow.plot_interactive_SWE_comp_HUC(pinlat=39.1, pinlong=-120, web=False)

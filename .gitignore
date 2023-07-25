@@ -7,3 +7,8 @@ Model/__pycache__/
 Model/.ipynb_checkpoints/
 
 .idea/
+Data_Processing_Assimilation/.ipynb_checkpoints/
+
+Data_Processing_Assimilation/outputs/
+
+Data/WBD/

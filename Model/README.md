@@ -17,11 +17,11 @@ mamba install -c anaconda suds-jurko
 ```
 
 ```bash
-mamba install geopandas pandas scikit-learn numpy=1.22 pyshp=2.1 matplotlib=3.5 seaborn tensorflow pillow shapely fonttools mamba install rioxarray rasterio earthpy h5py joblib pyproj kiwisolver pytables netCDF4 jupyter tqdm geojson ulmo pystac-client planetary-computer richdem elevation xgboost lightgbm python-graphviz vincent hvplot holoviews bokeh
+mamba install geopandas pandas scikit-learn numpy=1.22 pyshp=2.1 matplotlib=3.5 seaborn tensorflow pillow shapely fonttools mamba install rioxarray rasterio earthpy h5py joblib pyproj kiwisolver pytables netCDF4 jupyter tqdm geojson ulmo pystac-client planetary-computer richdem elevation xgboost lightgbm python-graphviz vincent hvplot holoviews bokeh earthengine-api python-dotenv geemap h5netcdf rasterstats 
 ```
 
 ```bash
-pip install tables basemap hdfdict hydroeval  
+pip install tables basemap hdfdict hydroeval geetools 
 ```
 
 > If you ever get any errors, try running `mamba install --force-reinstall <package>` to install the package.
