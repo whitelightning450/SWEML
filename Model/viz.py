@@ -11,9 +11,9 @@ def plot_single_date(cwd, area, date):
     """
     Create a single matplotlib plot of a single date model inference
         Args: 
-            cwd (str): current working diectory. This should be the "Model" directory.
+            cwd (str): current working directory. This should be the "National-Snow-Model" directory.
             area (str): Name of the region to model.
-            date (str): 'YYYY-MM-DD' - Date of model infrence to plot.
+            date (str): 'YYYY-MM-DD' - Date of model inference to plot.
     """
     #load SWE predictions up to the end_date
     preds=pd.read_csv(cwd+'\\'+area+'\Predictions\submission_format_'+area+'_'+date+'.csv', index_col = [0])
