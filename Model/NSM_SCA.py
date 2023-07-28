@@ -37,7 +37,7 @@ import time
 
 class NSM_SCA(SWE_Prediction):
 
-    def __init__(self, cwd: Union[str, Path], date: Union[str, datetime], delta=7, timeDelay=3):
+    def __init__(self, cwd: Union[str, Path], date: Union[str, datetime], delta=7, timeDelay=3, threshold=0.2):
         """
             Initializes the NSM_SCA class by calling the superclass constructor.
 
@@ -46,6 +46,7 @@ class NSM_SCA(SWE_Prediction):
                 date (str): The date of the prediction.
                 delta (int): How many days back to go for Last SWE.
                 timeDelay (int): Use the SCA rasters from [timeDelay] days ago. Simulates operations in the real world.
+                threshold (float): The threshold for NDSI, if greater than this value, it is considered to be snow.
         """
         if type(cwd) != Path:
             cwd = Path(cwd)  # Convert to Path object if necessary
@@ -60,6 +61,7 @@ class NSM_SCA(SWE_Prediction):
         self.delayedDate = date - pd.Timedelta(days=timeDelay)
 
         self.SCA_folder = self.cwd + "/Data/VIIRS_SCA/"
+        self.threshold = threshold * 100  # Convert percentage to values used in VIIRS NDSI
 
         self.auth = ea.login(strategy="netrc")
         if self.auth is None:
@@ -132,7 +134,7 @@ class NSM_SCA(SWE_Prediction):
                                             self.delayedDate)  # Fetch granules
             regional_raster = createMergedRxr(region_granules["filepath"])  # Merge granules
 
-        adf = augmentGeoDF(geoRegionDF, regional_raster, buffer=500)  # Buffer by 500 meters -> 1km square
+        adf = augmentGeoDF(geoRegionDF, regional_raster, buffer=500, threshold=self.threshold)  # Buffer by 500 meters -> 1km square
         # adf.drop(columns=["geometry"], inplace=True)  # Drop geometry column
 
         return adf
@@ -526,7 +528,7 @@ def createMergedRxr(files: list[str]) -> xr.DataArray:
 
 def augmentGeoDF(gdf: gpd.GeoDataFrame,
                  raster: xr.DataArray,
-                 threshold: int = 20,  # TODO try 10
+                 threshold: float = 20,  # TODO try 10
                  noData: int = 255,
                  buffer: float = None) -> gpd.GeoDataFrame:
     """
