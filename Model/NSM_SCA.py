@@ -196,10 +196,11 @@ class NSM_SCA(SWE_Prediction):
             # self.Prev_df = self.Prev_df.append(pd.DataFrame(self.predictions[Region][self.date]))
             self.Prev_df = pd.DataFrame(self.Prev_df)
 
-            self.predictions[Region].to_hdf(self.cwd + f"/Predictions/{self.threshold}/predictions{self.date}.h5", key=Region)
+            self.predictions[Region].to_hdf(f"{self.cwd}/Predictions/{self.threshold}/predictions{self.date}.h5", key=Region)
+            self.predictions[Region].to_hdf(f"{self.cwd}/Predictions/predictions{self.date}.h5", key=Region)
 
         # load submission DF and add predictions, if locations are removed or added, this needs to be modified
-        self.subdf = pd.read_csv(self.cwd + f"/Predictions/{self.threshold}/submission_format_{self.prevdate}.csv")
+        self.subdf = pd.read_csv(f"{self.cwd}/Predictions/{self.threshold}/submission_format_{self.prevdate}.csv")
         self.subdf.index = list(self.subdf.iloc[:, 0].values)
         self.subdf = self.subdf.iloc[:, 1:]  # TODO replace with drop("cell_id")
 
@@ -208,7 +209,8 @@ class NSM_SCA(SWE_Prediction):
         self.Prev_df = self.Prev_df.loc[self.sub_index]
         self.subdf[self.date] = self.Prev_df[self.date].astype(float)
         # subdf.index.names = [' ']
-        self.subdf.to_csv(self.cwd + f"/Predictions/{self.threshold}/submission_format_{self.date}.csv")
+        self.subdf.to_csv(f"{self.cwd}/Predictions/{self.threshold}/submission_format_{self.date}.csv")
+        self.subdf.to_csv(f"{self.cwd}/Predictions/submission_format_{self.date}.csv")
 
         # set up model prediction function
 
