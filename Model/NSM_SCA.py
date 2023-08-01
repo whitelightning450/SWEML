@@ -19,7 +19,7 @@ import rasterstats as rs
 
 # Data Access Packages
 import earthaccess as ea
-from Data_Processing_Assimilation.nsidc_fetch import download, format_date, format_boundingbox
+from nsidc_fetch import download, format_date, format_boundingbox
 import h5py
 import pickle
 from tensorflow.keras.models import load_model
@@ -118,7 +118,7 @@ class NSM_SCA(SWE_Prediction):
         try:
             self.Forecast  # Check if forecast dataframe has been initialized
         except AttributeError:
-            path = self.cwd + "/Data/Processed/Prediction_DF_" + self.date + ".pkl"
+            path = self.cwd + "/Data/Processed/Prediction_DF_" + self.date + ".pkl" #This may need to be the region
             self.Forecast = pd.read_pickle(path)
 
         region_df = self.Forecast[region]
@@ -196,10 +196,10 @@ class NSM_SCA(SWE_Prediction):
             # self.Prev_df = self.Prev_df.append(pd.DataFrame(self.predictions[Region][self.date]))
             self.Prev_df = pd.DataFrame(self.Prev_df)
 
-            self.predictions[Region].to_hdf(self.cwd + '/Predictions/predictions' + self.date + '.h5', key=Region)
+            self.predictions[Region].to_hdf(self.cwd + f"/Predictions/{self.threshold}/predictions{self.date}.h5", key=Region)
 
         # load submission DF and add predictions, if locations are removed or added, this needs to be modified
-        self.subdf = pd.read_csv(self.cwd + '/Predictions/submission_format_' + self.prevdate + '.csv')
+        self.subdf = pd.read_csv(self.cwd + f"/Predictions/{self.threshold}/submission_format_{self.prevdate}.csv")
         self.subdf.index = list(self.subdf.iloc[:, 0].values)
         self.subdf = self.subdf.iloc[:, 1:]  # TODO replace with drop("cell_id")
 
@@ -208,7 +208,7 @@ class NSM_SCA(SWE_Prediction):
         self.Prev_df = self.Prev_df.loc[self.sub_index]
         self.subdf[self.date] = self.Prev_df[self.date].astype(float)
         # subdf.index.names = [' ']
-        self.subdf.to_csv(self.cwd + '/Predictions/submission_format_' + self.date + '.csv')
+        self.subdf.to_csv(self.cwd + f"/Predictions/{self.threshold}/submission_format_{self.date}.csv")
 
         # set up model prediction function
 
@@ -566,18 +566,3 @@ def augmentGeoDF(gdf: gpd.GeoDataFrame,
     return gdf
 
 
-if __name__ == '__main__':
-    NSM = NSM_SCA("/Users/jmac/Documents/Programming/REU/National-Snow-Model", "2019-04-08")
-
-    NSM.Get_Monitoring_Data_Threaded()
-
-    bbox = NSM.getPredictionExtent()
-
-    NSM.initializeGranules(bbox, NSM.SCA_folder)
-
-    NSM.Data_Processing()
-
-    NSM.augmentPredictionDFs()
-
-    NSM.SWE_Predict()
-    print("done")

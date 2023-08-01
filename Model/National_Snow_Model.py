@@ -336,15 +336,19 @@ class SWE_Prediction():
     def get_CDEC(self, station_id, sensor_id, resolution, start_date, end_date):
 
         try:
-            url = 'https://cdec.water.ca.gov/dynamicapp/selectQuery?Stations=%s' % (station_id) + '&SensorNums=%s' % (
-                sensor_id) + '&dur_code=%s' % (resolution) + '&Start=%s' % (start_date) + '&End=%s' % (end_date)
-            CDEC_SWE = pd.read_html(url)[0]
+            # old url = 'https://cdec.water.ca.gov/dynamicapp/selectQuery?Stations=%s' % (station_id) + '&SensorNums=%s' % (
+                #sensor_id) + '&dur_code=%s' % (resolution) + '&Start=%s' % (start_date) + '&End=%s' % (end_date)
+            url = 'https://cdec.water.ca.gov/dynamicapp/selectSnow?Stations=%s' % (station_id) + '&SensorNums=%s' % (
+                sensor_id) + '&Start=%s' % (start_date) + '&End=%s' % (end_date)
+            #CDEC_SWE = pd.read_html(url)[0]
+            CDEC_SWE = pd.read_html(url)[1]
             CDEC_SWE['station_id'] = 'CDEC:' + station_id
             CDEC_SWE = CDEC_SWE.set_index('station_id')
             CDEC_SWE = pd.DataFrame(CDEC_SWE.iloc[-1]).T
-            col = ['SNOW WC INCHES']
+            #col = ['SNOW WC INCHES']
+            col = 'W.C.'
             CDEC_SWE = CDEC_SWE[col]
-            CDEC_SWE = CDEC_SWE.rename(columns={'SNOW WC INCHES': end_date})
+            CDEC_SWE = CDEC_SWE.rename(columns={'W.C.': end_date})
 
         except:
             # print('Unable to fetch SWE data for site ', station_id, 'SWE value: -9999')
