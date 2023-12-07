@@ -22,7 +22,7 @@ Figure 1. The SWEML supports an interactive SWE inference interface to explore h
 SWE estimates around the timing of peak SWE for the domain in the Sierra Nevada mountains.
 
 ## General Model Performance
-In the current form, we train SWEML on 75% of the avaible NASA ASO observations and snow course surveys from the 2013-2018 period. 
+In the current form, we train SWEML on 75% of the available NASA ASO observations and snow course surveys from the 2013-2018 period. 
 General model development used the remaining 25% of the observations to test the model and we evaluate model performance using the [Standardized Snow Water Equivalent Tool (SSWEET)](https://github.com/whitelightning450/Standardized-Snow-Water-Equivalent-Evaluation-Tool) on a full hindcast of the 2019 water year.
 A hindcast simulation prevents any data leakage from the training data, supports a robust investigation of the expected performance of SWEML in operations, and demonstrates a framework for performing retrospective simulations.
 The below figures represent the results of the hindcast from the 2019 simulation.
@@ -35,7 +35,7 @@ Figure 3. SWEML produces high model skill for all regions
 
 
 ![Alpine](./Images/Alpine.png)
-Figure 4. Regional average SWE estimates closely match the observations magnitude and timing (e.g., peak SWE, melt)
+Figure 4. Regional average SWE estimates closely match the observations' magnitude and timing (e.g., peak SWE, melt)
 
 ![Error](./Images/ErrorVsElevation3_Hindcast.png)
 Figure 5. The error in SWE estimates for the three snow classification types vs. elevation.
