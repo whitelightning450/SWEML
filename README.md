@@ -31,14 +31,14 @@ The below figures represent the results of the hindcast from the 2019 simulation
 Figure 2. SWEML estimates for three key snow classification types closely match the observed.
 
 ![TablePerf](./Images/ModelPerfTable.JPG)
-Figure 3. SWEML produces high model skill for all regions
+Table 1. SWEML produces high model skill for all regions
 
 
 ![Alpine](./Images/Alpine.png)
-Figure 4. Regional average SWE estimates closely match the observations magnitude and timing (e.g., peak SWE, melt)
+Figure 3. Regional average SWE estimates closely match the observations magnitude and timing (e.g., peak SWE, melt)
 
 ![Error](./Images/ErrorVsElevation3_Hindcast.png)
-Figure 5. The error in SWE estimates for the three snow classification types vs. elevation.
+Figure 4. The error in SWE estimates for the three snow classification types vs. elevation.
 
 
 ## Data Sources (training, inference, where/how used)
