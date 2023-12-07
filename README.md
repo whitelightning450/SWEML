@@ -1,4 +1,4 @@
-![NSM_Cover](https://user-images.githubusercontent.com/33735397/223741418-d1c5220b-74ca-4003-8068-d8116f710e29.JPG)
+![NSM_Cover](./Images/ML_SWE.jpg)
 
 # Snow Water Equivalent Machine Learning (SWEML): Using Machine Learning to Advance Snow State Modeling
 
