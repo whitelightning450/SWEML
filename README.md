@@ -1,6 +1,6 @@
 ![NSM_Cover](https://user-images.githubusercontent.com/33735397/223741418-d1c5220b-74ca-4003-8068-d8116f710e29.JPG)
 
-# National Snow Model: Using Machine Learning to Advance Snow State Modeling
+# Snow Water Equivalent Machine Learning (SWEML): Using Machine Learning to Advance Snow State Modeling
 
 [![Deploy](https://github.com/geo-smart/use_case_template/actions/workflows/deploy.yaml/badge.svg)](https://github.com/geo-smart/use_case_template/actions/workflows/deploy.yaml)
 [![Jupyter Book Badge](https://jupyterbook.org/badge.svg)](https://geo-smart.github.io/use_case_template)
