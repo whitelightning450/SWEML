@@ -41,7 +41,7 @@ Below are the respective chapters addressing these items:
 
 ## Model Running Instructions: Making a Model Inference
 
-The Wasatch Snow-ML model requires several steps before making an inference. 
+The SWEML model requires several steps before making an inference. 
 Below is a high-level overview of the necessary steps, which we go into more detail later.
 1. Observations for the prior and current week (i.e. Snotel). For example, to make predictions for January 20th, we need observations for both January 20th and January 13th. 
 2. Initial Conditions. The initial conditions model (SWE_Initial_Conditions_Prediction.ipynb) initiates each location’s modeled SWE value, creating a prediction for all locations in the submission file. 
@@ -54,7 +54,7 @@ Figure 1. The initial conditions model requires the date to be January 20th, 202
 
 
 ## Model Spin-up.
-After the completion of the initial conditions predictions, the Wasatch Snow-ML uses the SWE_Prediction.ipynb script which continues to leverage the current and previous week’s ground measures. 
+After the completion of the initial conditions predictions, the SWEML uses the SWE_Prediction.ipynb script which continues to leverage the current and previous week’s ground measures. 
 This model continues to require all DataDriven groundmeasures.csv files to be named according to their latest release (e.g., ground_measures_features_02_03_2022.csv for February 3rd, 2022). 
 This ensures that the existing script pulls the most to-date observations and processes accordingly. Run this model up to the current period of observation.
 A complete run provides a visualization of each region’s SWE, mapped and plotted against elevation as exhibited in Figures 2 and 3. 
@@ -66,7 +66,7 @@ Figure 2. Model spin-up illustrates each region’s predictions. For example, th
 
 ![S_Sierras_SWE_Map](https://user-images.githubusercontent.com/33735397/155616067-30779c28-3f4a-4b09-a54d-7cbf04e91269.PNG)
 
-Figure 3. The Wasatch Snow-ML model illustrates each week’s model prediction over the region of interest.
+Figure 3. The SWEML model illustrates each week’s model prediction over the region of interest.
 
 
 ## Inference. 
@@ -127,7 +127,7 @@ Aspect and slope angle from the geoJSON data for each grid cell was converted to
 The training data is compiled in /Data_Processing_Assimilation/Geoprocessing_and_Training/Data_Training.ipynb  into a dictionary format and saved as a .h5 file (/Data/Model_Calibraition_Data/RegionTrain_Final.h5).
 
 ## Model instructions: Training
-The Wasatch Snow-ML model calibration scripts are located in the following directory:
+The SWEML model calibration scripts are located in the following directory:
 
 Model->Model_Calibration. 
 
@@ -137,7 +137,7 @@ The identified features for each region, and for initial and post-initial condit
 
 ![Regions](https://user-images.githubusercontent.com/33735397/155618808-ea8f9cc0-180e-4621-a4c5-142a2adf8621.PNG)
 
-Figure 5. The Wasatch Snow-ML model consists of twenty-three subregions (Southern Sierras consist of lower and high elevations) to create regionally-specific model features.
+Figure 5. The SWEML model consists of twenty-three subregions (Southern Sierras consist of lower and high elevations) to create regionally-specific model features.
 
 
 Each region’s and prediction conditions (initial or thereafter) deep learning model (MLP) uses the same nine-layer-node architecture as illustrated in Table 1, except layer one (Input) which is based on the total number of regionally-specific input features.
@@ -155,7 +155,7 @@ Each region’s and prediction conditions (initial or thereafter) deep learning 
 |Hidden | 8             |  5                  |
 | Output| 9             |  1                  |
 
-Table 1.  The initial conditions and after Wasatch Snow-ML models deep learning structure consists of an input layer determined by the number of ideal region-specific features, and the same layer-node for all hidden layers and output the layer.
+Table 1.  The initial conditions and after SWEML models deep learning structure consists of an input layer determined by the number of ideal region-specific features, and the same layer-node for all hidden layers and output the layer.
 
 
 The model calibration of initial and thereafter conditions uses all of the provided  2013-2017 ground observations (SNOTEL, CDEC) and in-situ observations (1 km lat/long) processed into the “Region_Train_Final.h5” file. 
