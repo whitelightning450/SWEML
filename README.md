@@ -18,7 +18,7 @@ The ML pipeline retrieves all SWE observations from SNOTEL and CDEC snow monitor
 SWEML predicts SWE using a uniquely trained multilayered perceptron network model for each region and supports an interactive visualizaiton of the SWE estimates across the western U.S. 
 
 ![SWEinteractive](./Images/SWE_2019.gif)
-Figure 1. The SWEML supports an interactive SWE inference interface to explore how SWE changes with location across the western U.S. 
+Figure 1. Example hindcast simulation in the domain in Colorado.
 SWE estimates around the timing of peak SWE for the domain in the Sierra Nevada mountains.
 
 ### Explore the current version of the model
