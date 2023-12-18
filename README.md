@@ -19,7 +19,7 @@ SWEML predicts SWE using a uniquely trained multilayered perceptron network mode
 
 ![SWEinteractive](./Images/SWE_2019.gif)
 Figure 1. Example hindcast simulation in the domain in Colorado.
-SWE estimates around the timing of peak SWE for the domain in the Sierra Nevada mountains.
+SWE estimates around the timing of peak SWE for the domain in the Colorado Rocky mountains.
 
 ### Explore the current version of the model
 To fast track to the current model and application, click the [Neural Network Model](https://github.com/whitelightning450/SWEML/tree/main/Model/Neural_Network) and explore the files.
