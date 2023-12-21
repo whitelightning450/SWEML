@@ -13,16 +13,16 @@
 ## Deep Learning 1 km resolution SWE prediction model
 The current iteration of the SWEML produces 11,000 1 km SWE inferences for select locations throughout the Western U.S. plus the Upper Colorado River Basin.
 There is a heavy focus on SWE inferences in the Sierra Nevada mountains, Colorado Rockies, and Wind River Range in Wyoming.
-The NSM pipeline assimilates nearly 700 snow telemetry (SNOTEL) and California Data Exchange Center (CDEC) sites and combines with processed lidar-derived terrain features for the prediction of a 1 km x 1 km SWE inference in critical snowsheds.
+The NSM pipeline assimilates nearly 700 snow telemetry (SNOTEL) and California Data Exchange Center (CDEC) sites and combines them with processed lidar-derived terrain features for the prediction of a 1 km x 1 km SWE inference in critical snowsheds.
 The ML pipeline retrieves all SWE observations from SNOTEL and CDEC snow monitoring locations for the date of interest and processes the SWE observations into a model-friendly data frame alongside lidar-derived terrain features, seasonality metrics, previous SWE estimates, and location.
-SWEML predicts SWE using a uniquely trained multilayered perceptron network model for each region and supports an interactive visualizaiton of the SWE estimates across the western U.S. 
+SWEML predicts SWE using a uniquely trained multilayered perceptron network model for each region and supports an interactive visualization of the SWE estimates across the western U.S. 
 
 ![SWEinteractive](./Images/SWE_2019.gif)
-Figure 1. Example hindcast simulation in the domain in Colorado.
-SWE estimates around the timing of peak SWE for the domain in the Colorado Rocky mountains.
+Figure 1. Example hindcast simulation in the Colorado domain demonstrates snow accumulation as the season progresses, especially at higher elevations, and only predicts SWE where NASA VIIRS fSCA imagery indicates snow covering greater than 20% of the terrain.
+
 
 ### Explore the current version of the model
-To fast track to the current model and application, click the [Neural Network Model](https://github.com/whitelightning450/SWEML/tree/main/Model/Neural_Network) and explore the files.
+To fast-track to the current model and application, click the [Neural Network Model](https://github.com/whitelightning450/SWEML/tree/main/Model/Neural_Network) and explore the files.
 
 
 ## General Model Performance
@@ -39,7 +39,7 @@ Table 1. SWEML produces high model skill for all regions
 
 
 ![Alpine](./Images/Alpine.png)
-Figure 3. Regional average SWE estimates closely match the observations magnitude and timing (e.g., peak SWE, melt)
+Figure 3. Regional average SWE estimates closely match the  magnitude and timing (e.g., peak SWE, melt) of observations.
 
 ![Error](./Images/ErrorVsElevation3_Hindcast.png)
 Figure 4. The error in SWE estimates for the three snow classification types vs. elevation.
