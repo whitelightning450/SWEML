@@ -10,3 +10,4 @@ Data/WBD/
 *.csv
 *.h5
 *.pkl
+*.parquet
