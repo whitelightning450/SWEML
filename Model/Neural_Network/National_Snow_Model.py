@@ -66,6 +66,22 @@ from datetime import timedelta
 
 warnings.filterwarnings("ignore")
 
+#load access key
+HOME = os.path.expanduser('~')
+KEYPATH = "SWEML/AWSaccessKeys.csv"
+ACCESS = pd.read_csv(f"{HOME}/{KEYPATH}")
+
+#start session
+SESSION = boto3.Session(
+    aws_access_key_id=ACCESS['Access key ID'][0],
+    aws_secret_access_key=ACCESS['Secret access key'][0],
+)
+S3 = SESSION.resource('s3')
+#AWS BUCKET information
+BUCKET_NAME = 'national-snow-model'
+#S3 = boto3.resource('S3', config=Config(signature_version=UNSIGNED))
+BUCKET = S3.Bucket(BUCKET_NAME)
+
 
 class SWE_Prediction():
     def __init__(self, date, delta=7, Regions= ['N_Sierras']):
@@ -74,26 +90,7 @@ class SWE_Prediction():
         self.prevdate = pd.to_datetime(date) - timedelta(days=delta)
         self.prevdate = self.prevdate.strftime('%Y-%m-%d')
         self.Regions = Regions
-
-        # set path directory
-        #self.cwd = cwd
-        #self.datapath = datapath
-        
-         #load access key
-        home = os.path.expanduser('~')
-        keypath = "apps/AWSaccessKeys.csv"
-        access = pd.read_csv(f"{home}/{keypath}")
-
-        #start session
-        session = boto3.Session(
-            aws_access_key_id=access['Access key ID'][0],
-            aws_secret_access_key=access['Secret access key'][0],
-        )
-        s3 = session.resource('s3')
-        #AWS bucket information
-        bucket_name = 'national-snow-model'
-        #s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
-        self.bucket = s3.Bucket(bucket_name)
+        self.bucket = S3.BUCKET(BUCKET_NAME)
         self.home = home
 
   
@@ -387,7 +384,7 @@ class SWE_Prediction():
 
     def Get_Monitoring_Data(self, getdata = False):
         if getdata ==True:
-            GM_template = pd.read_csv(f"{self.home}/NSM/Snow-Extrapolation/data/PreProcessed/ground_measures_features_template.csv")
+            GM_template = pd.read_csv(f"{self.home}/SWEML/data/PreProcessed/ground_measures_features_template.csv")
             GM_template = GM_template.rename(columns={'Unnamed: 0': 'station_id'})
             GM_template.index = GM_template['station_id']
             cols = ['Date']
@@ -451,7 +448,7 @@ class SWE_Prediction():
 
             #SWE_df.to_csv(self.cwd + '/Data/Pre_Processed_DA/ground_measures_features_' + date + '.csv')
             self.SWE_df = SWE_df
-            self.SWE_df.to_hdf(f"{self.home}/NSM/Snow-Extrapolation/data/PreProcessed/ground_measures_features.h5", key = date)
+            self.SWE_df.to_hdf(f"{self.home}/SWEML/data/PreProcessed/ground_measures_features.h5", key = date)
 
     def get_SNOTEL_Threaded(self, sitecode, start_date, end_date):
         # print(sitecode)
@@ -615,8 +612,8 @@ class SWE_Prediction():
             self.SWE_df = self.SWE_df.rename(columns={'index': 'station_id'})
             self.SWE_df = self.SWE_df.set_index('station_id')
 
-            #self.SWE_df.to_csv(f"{self.home}/NSM/Snow-Extrapolation/data/PreProcessed/ground_measures_features_{date}.csv")
-            self.SWE_df.to_hdf(f"{self.home}/NSM/Snow-Extrapolation/data/PreProcessed/ground_measures_features.h5", key = date)
+            #self.SWE_df.to_csv(f"{self.home}/SWEML/data/PreProcessed/ground_measures_features_{date}.csv")
+            self.SWE_df.to_hdf(f"{self.home}/SWEML/data/PreProcessed/ground_measures_features.h5", key = date)
             # print("saved to:", self.cwd + '/Data/Pre_Processed_DA/ground_measures_features_' + date + '.csv')
 
     # Data Assimilation script, takes date and processes to run model.
@@ -624,13 +621,13 @@ class SWE_Prediction():
 
         # load ground truth values (SNOTEL): Testing
         #obs_path = self.datapath + '/data/PreProcessed/ground_measures_features_' + self.date + '.csv'
-        obs_path = f"{self.home}/NSM/Snow-Extrapolation/data/PreProcessed/ground_measures_features.h5"
+        obs_path = f"{self.home}/SWEML/data/PreProcessed/ground_measures_features.h5"
         #self.GM_Test = pd.read_csv(obs_path)
         self.GM_Test = pd.read_hdf(obs_path, key = self.date)
         # load ground truth values (SNOTEL): previous week, these have Na values filled by prev weeks obs +/- mean region Delta SWE
         #obs_path = self.datapath + '/data/PreProcessed/DA_ground_measures_features_' + self.prevdate + '.csv'
         #self.GM_Prev = pd.read_csv(obs_path)
-        obs_path = f"{self.home}/NSM/Snow-Extrapolation/data/PreProcessed/DA_ground_measures_features.h5"
+        obs_path = f"{self.home}/SWEML/data/PreProcessed/DA_ground_measures_features.h5"
         self.GM_Prev = pd.read_hdf(obs_path, key = self.prevdate)
         
         
@@ -639,8 +636,8 @@ class SWE_Prediction():
 
         # All coordinates of 1 km polygon used to develop ave elevation, ave slope, ave aspect
         #path = self.datapath + '/data/PreProcessed/RegionVal.pkl'  # TODO change to RegionVals?
-        #path = f"{self.home}/NSM/Snow-Extrapolation/data/PreProcessed/RegionVal2.pkl"
-        path = f"{self.home}/NSM/Snow-Extrapolation/data/PreProcessed/RegionVal.pkl"
+        #path = f"{self.home}/SWEML/data/PreProcessed/RegionVal2.pkl"
+        path = f"{self.home}/SWEML/data/PreProcessed/RegionVal.pkl"
         # load regionalized geospatial data
         self.RegionTest = open(path, "rb")
         self.RegionTest = pd.read_pickle(self.RegionTest)
@@ -678,7 +675,7 @@ class SWE_Prediction():
         self.GM_Test = self.GM_Test.rename(columns={'variable': 'Date', 'value': 'SWE'})
 
         # load ground truth meta
-        self.GM_Meta = pd.read_csv(f"{self.home}/NSM/Snow-Extrapolation/data/PreProcessed/ground_measures_metadata.csv")
+        self.GM_Meta = pd.read_csv(f"{self.home}/SWEML/data/PreProcessed/ground_measures_metadata.csv")
 
         # merge testing ground truth location metadata with snotel data
         self.GM_Test = self.GM_Meta.merge(self.GM_Test, how='inner', on='station_id')
@@ -730,7 +727,7 @@ class SWE_Prediction():
 
         # Need to save 'updated non-na' df's
         #GM_path = self.datapath + '/data/PreProcessed/DA_ground_measures_features_' + self.date + '.csv'
-        GM_path = f"{self.home}/NSM/Snow-Extrapolation/data/PreProcessed/DA_ground_measures_features.h5"
+        GM_path = f"{self.home}/SWEML/data/PreProcessed/DA_ground_measures_features.h5"
         #self.Future_GM_Pred.to_csv(GM_path)
         self.Future_GM_Pred.to_hdf(GM_path, key = self.date)
         # This needs to be here to run in next codeblock
@@ -889,7 +886,7 @@ class SWE_Prediction():
 
         # load RFE optimized features
         self.Region_optfeatures = pickle.load(
-            open(f"{self.home}/NSM/Snow-Extrapolation/data/Optimal_Features.pkl", "rb"))
+            open(f"{self.home}/SWEML/data/Optimal_Features.pkl", "rb"))
 
         # Reorder regions
         self.Forecast = {k: self.Forecast[k] for k in self.Region_list}

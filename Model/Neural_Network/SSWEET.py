@@ -38,6 +38,23 @@ import os
 import json
 import warnings; warnings.filterwarnings("ignore")
 
+#load access key
+HOME = os.path.expanduser('~')
+KEYPATH = "SWEML/AWSaccessKeys.csv"
+ACCESS = pd.read_csv(f"{HOME}/{KEYPATH}")
+
+#start session
+SESSION = boto3.Session(
+    aws_access_key_id=ACCESS['Access key ID'][0],
+    aws_secret_access_key=ACCESS['Secret access key'][0],
+)
+S3 = SESSION.resource('s3')
+#AWS BUCKET information
+BUCKET_NAME = 'national-snow-model'
+#S3 = boto3.resource('S3', config=Config(signature_version=UNSIGNED))
+BUCKET = S3.Bucket(BUCKET_NAME)
+
+
 #A function to load model predictions
 def load_Predictions(Region_list):
     #Regions = ['N_Sierras','S_Sierras_Low', 'S_Sierras_High']
@@ -175,23 +192,7 @@ def parityplot(RegionTest):
     
 #Plot the error/prediction compared to different variables
 def Model_Vs(RegionTest,metric,model_output):
-    #load access key
-    home = os.path.expanduser('~')
-    keypath = "apps/AWSaccessKeys.csv"
-    access = pd.read_csv(f"{home}/{keypath}")
-
-    #start session
-    session = boto3.Session(
-        aws_access_key_id=access['Access key ID'][0],
-        aws_secret_access_key=access['Secret access key'][0],
-    )
-    s3 = session.resource('s3')
-    #AWS bucket information
-    bucket_name = 'national-snow-model'
-    #s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
-    bucket = s3.Bucket(bucket_name)
-
-    
+       
     #Get regions
     Regions = list(RegionTest.keys())
      
@@ -201,7 +202,7 @@ def Model_Vs(RegionTest,metric,model_output):
     
     #RegionTrain_SCA_path = f"{datapath}/data/RegionTrain_SCA.pkl"   
     file_key = 'data/RegionTrain_SCA.pkl'
-    obj = bucket.Object(file_key)
+    obj = BUCKET.Object(file_key)
     body = obj.get()['Body']
     df_Region = pd.read_pickle(body)
     
@@ -272,35 +273,15 @@ def Model_Vs(RegionTest,metric,model_output):
     
 #create geopandas dataframes to map predictions and obs
 def createGeoSpatial(Sites, Region_list):
-     #load access key
-    home = os.path.expanduser('~')
-    keypath = "apps/AWSaccessKeys.csv"
-    access = pd.read_csv(f"{home}/{keypath}")
-
-    #start session
-    session = boto3.Session(
-        aws_access_key_id=access['Access key ID'][0],
-        aws_secret_access_key=access['Secret access key'][0],
-    )
-    s3 = session.resource('s3')
-    #AWS bucket information
-    bucket_name = 'national-snow-model'
-    #s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
-    bucket = s3.Bucket(bucket_name)  
-    
-    #Load RegionTrain and Snotel Geospatial DFs
-    #GeoSpatial = open(f"{datapath}/data/RegionTrain.pkl", "rb")
-    #GeoSpatial = pickle.load(GeoSpatial)
-    
     file_key = 'data/RegionTrain.pkl'
-    obj = bucket.Object(file_key)
+    obj = BUCKET.Object(file_key)
     body = obj.get()['Body']
     GeoSpatial = pd.read_pickle(body)
     
     #Snotel = open(f"{datapath}/data/RegionSnotel_Train.pkl", "rb")
     #Snotel = pickle.load(Snotel)
     file_key = 'data/RegionSnotel_Train.pkl'
-    obj = bucket.Object(file_key)
+    obj = BUCKET.Object(file_key)
     body = obj.get()['Body']
     Snotel = pd.read_pickle(body)
     
@@ -347,26 +328,9 @@ def createGeoSpatial(Sites, Region_list):
 #Get SNOTEL sites used as features
 #load RFE optimized features
 def InSitu_Locations(RegionTest):
-    
-     #load access key
-    home = os.path.expanduser('~')
-    keypath = "apps/AWSaccessKeys.csv"
-    access = pd.read_csv(f"{home}/{keypath}")
-
-    #start session
-    session = boto3.Session(
-        aws_access_key_id=access['Access key ID'][0],
-        aws_secret_access_key=access['Secret access key'][0],
-    )
-    s3 = session.resource('s3')
-    #AWS bucket information
-    bucket_name = 'national-snow-model'
-    #s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
-    bucket = s3.Bucket(bucket_name)  
-
-    #Region_optfeatures= pickle.load(open(f"{datapath}/data/Optimal_Features.pkl", "rb"))
+        #Region_optfeatures= pickle.load(open(f"{datapath}/data/Optimal_Features.pkl", "rb"))
     file_key = 'data/Optimal_Features.pkl'
-    obj = bucket.Object(file_key)
+    obj = BUCKET.Object(file_key)
     body = obj.get()['Body']
     Region_optfeatures = pd.read_pickle(body)
     
