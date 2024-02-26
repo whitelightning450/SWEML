@@ -37,6 +37,23 @@ from botocore import UNSIGNED
 from botocore.client import Config
 import os
 
+
+#load access key
+HOME = os.path.expanduser('~')
+KEYPATH = "SWEML/AWSaccessKeys.csv"
+ACCESS = pd.read_csv(f"{HOME}/{KEYPATH}")
+
+#start session
+SESSION = boto3.Session(
+    aws_access_key_id=ACCESS['Access key ID'][0],
+    aws_secret_access_key=ACCESS['Secret access key'][0],
+)
+S3 = SESSION.resource('s3')
+#AWS BUCKET information
+BUCKET_NAME = 'national-snow-model'
+#S3 = boto3.resource('S3', config=Config(signature_version=UNSIGNED))
+BUCKET = S3.Bucket(BUCKET_NAME)
+
 def atof(text):
     try:
         retval = float(text)
@@ -261,26 +278,7 @@ def Prelim_Eval(Predictions):
 
 
 def save_model_AWS(modelname, Region):
-    
-     #Set AWS connection
-    #load access key
-    home = os.path.expanduser('~')
-    keypath = "apps/AWSaccessKeys.csv"
-    access = pd.read_csv(f"{home}/{keypath}")
-
-    #start session
-    session = boto3.Session(
-        aws_access_key_id=access['Access key ID'][0],
-        aws_secret_access_key=access['Secret access key'][0],
-    )
-    s3 = session.resource('s3')
-    #AWS bucket information
-    bucket_name = 'national-snow-model'
-    #s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
-    bucket = s3.Bucket(bucket_name)
-
    #push model to AWS
-    bucket_name = 'national-snow-model'
     #Get a list of the necessary files
     path = f"./Model/{Region}/"
     files = []
@@ -295,29 +293,13 @@ def save_model_AWS(modelname, Region):
     print('Pushing files to AWS')
     for file in pbar(files):
         filepath = f"{path}/{file}"
-        s3.meta.client.upload_file(Filename= filepath, Bucket=bucket_name, Key=f"{modelname}/Model/{Region}/{file}")
+        S3.meta.client.upload_file(Filename= filepath, BUCKET=BUCKET_NAME, Key=f"{modelname}/Model/{Region}/{file}")
 
 #function to load model from AWS if needed
 def Load_Model(modelname, Region):
     #Set AWS connection
-    #load access key
-    home = os.path.expanduser('~')
-    keypath = "apps/AWSaccessKeys.csv"
-    access = pd.read_csv(f"{home}/{keypath}")
-
-    #start session
-    session = boto3.Session(
-        aws_access_key_id=access['Access key ID'][0],
-        aws_secret_access_key=access['Secret access key'][0],
-    )
-
-    s3 = session.resource('s3')
-    #AWS bucket information
-    bucket_name = 'national-snow-model'
-    #s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
-    bucket = s3.Bucket(bucket_name)
 
     #download model
-    s3.Bucket(bucket_name).download_file(f"{modelname}/Model/{Region}/{Region}_model.keras", f"./Model/{Region}/{Region}_model.keras")
-    s3.Bucket(bucket_name).download_file(f"{modelname}/Model/{Region}/{Region}_scaler.pkl", f"./Model/{Region}/{Region}_scaler.pkl")
-    s3.Bucket(bucket_name).download_file(f"{modelname}/Model/{Region}/{Region}_SWEmax.npy", f"./Model/{Region}/{Region}_SWEmax.npy")
+    S3.BUCKET(BUCKET_NAME).download_file(f"{modelname}/Model/{Region}/{Region}_model.keras", f"./Model/{Region}/{Region}_model.keras")
+    S3.BUCKET(BUCKET_NAME).download_file(f"{modelname}/Model/{Region}/{Region}_scaler.pkl", f"./Model/{Region}/{Region}_scaler.pkl")
+    S3.BUCKET(BUCKET_NAME).download_file(f"{modelname}/Model/{Region}/{Region}_SWEmax.npy", f"./Model/{Region}/{Region}_SWEmax.npy")

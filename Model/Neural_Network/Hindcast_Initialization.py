@@ -21,26 +21,27 @@ from botocore.client import Config
 import os
 warnings.filterwarnings("ignore")
 
+#load access key
+HOME = os.path.expanduser('~')
+KEYPATH = "SWEML/AWSaccessKeys.csv"
+ACCESS = pd.read_csv(f"{HOME}/{KEYPATH}")
+
+#start session
+SESSION = boto3.Session(
+    aws_access_key_id=ACCESS['Access key ID'][0],
+    aws_secret_access_key=ACCESS['Secret access key'][0],
+)
+S3 = SESSION.resource('s3')
+#AWS BUCKET information
+BUCKET_NAME = 'national-snow-model'
+#S3 = boto3.resource('S3', config=Config(signature_version=UNSIGNED))
+BUCKET = S3.Bucket(BUCKET_NAME)
+
 
 #Function for initializing a hindcast
 def Hindcast_Initialization(new_year, threshold, Region_list, SCA = True): 
     print('Creating files for a historical simulation within ', str(Region_list)[1:-1], ' regions for water year ', new_year)
     
-    #load access key
-    home = os.path.expanduser('~')
-    keypath = "apps/AWSaccessKeys.csv"
-    access = pd.read_csv(f"{home}/{keypath}")
-
-    #start session
-    session = boto3.Session(
-        aws_access_key_id=access['Access key ID'][0],
-        aws_secret_access_key=access['Secret access key'][0],
-    )
-    s3 = session.resource('s3')
-    #AWS bucket information
-    bucket_name = 'national-snow-model'
-    #s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
-    bucket = s3.Bucket(bucket_name)
     
     #Grab existing files based on water year
     prev_year = '2022'
@@ -55,7 +56,7 @@ def Hindcast_Initialization(new_year, threshold, Region_list, SCA = True):
     SWE_new = {}
     for region in Region_list:
         #The below file will serve as a starting poinw
-        SWE_new[region] = pd.read_hdf(f"{home}/NSM/Snow-Extrapolation/data/PreProcessed/predictions{prev_year}-09-24.h5", key = region)
+        SWE_new[region] = pd.read_hdf(f"{HOME}/SWEML/data/PreProcessed/predictions{prev_year}-09-24.h5", key = region)
         SWE_new[region].rename(columns = {prev_date:new_date}, inplace = True)
         #SWE_new[region].to_hdf(f"./Predictions/Hold_Out_Year/predictions{new_year}-09-25.h5", key = region) - change to pkl file to make sim happy
     
@@ -68,33 +69,12 @@ def Hindcast_Initialization(new_year, threshold, Region_list, SCA = True):
         file = open(path, "wb")
         pickle.dump(SWE_new, file)
         file.close()
-   
-
-    #set the ground measures features DF    
-    #obs_old = pd.read_csv(f"{datapath}/data/PreProcessed/ground_measures_features_{prev_year}-09-24.csv")
-    #obs_old.rename(columns = {'Unnamed: 0':'station_id', prev_date:new_date}, inplace = True)
-    #obs_old.set_index('station_id', inplace = True)
-    #obs_old[new_date] = 0
-    #obs_old.to_csv(f"{datapath}/data/PreProcessed/ground_measures_features_{new_year}-09-25.csv")
-    #obs_old.to_hdf(f"{datapath}/data/PreProcessed/ground_measures_features.h5", key = f"{new_year}-09-25")
-
-    #print('Ground measures features df complete')
-
-    #load the ground_measures_features meta w/preds
-    #obs_meta_old = pd.read_csv(f"{datapath}/data/PreProcessed/DA_ground_measures_features_{prev_year}-09-24.csv")
-    #obs_meta_old.rename(columns = {'Unnamed: 0':'station_id'}, inplace = True)
-    #obs_meta_old.set_index('station_id', inplace = True)
-    #obs_meta_old['Date'] = new_date
-    #obs_meta_old.to_csv(f"{datapath}/data/PreProcessed/DA_ground_measures_features_{new_year}-09-25.csv")
-    #obs_meta_old.to_hdf(f"{datapath}/data/PreProcessed/DA_ground_measures_features.h5", key =f"{new_year}-09-25")
-    #print('Ground measures features meta df complete')
     
 
 
     #Make a submission DF
-    #old_preds = pd.read_csv(f"{datapath}/data/PreProcessed/submission_format_{prev_date}.csv")
     csv_key = f"data/PreProcessed/submission_format_{prev_date}.csv"
-    obj = bucket.Object(csv_key)
+    obj = BUCKET.Object(csv_key)
     body = obj.get()['Body']
     old_preds = pd.read_csv(body)
     
@@ -136,22 +116,7 @@ def daterange(start_date, end_date):
         
         
 def HindCast_DataProcess(datelist,Region_list):
-     #load access key
-    home = os.path.expanduser('~')
-    keypath = "apps/AWSaccessKeys.csv"
-    access = pd.read_csv(f"{home}/{keypath}")
-
-    #start session
-    session = boto3.Session(
-        aws_access_key_id=access['Access key ID'][0],
-        aws_secret_access_key=access['Secret access key'][0],
-    )
-    s3 = session.resource('s3')
-    #AWS bucket information
-    bucket_name = 'national-snow-model'
-    #s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
-    bucket = s3.Bucket(bucket_name)
-    
+     #load access key    
     #get held out year observational data
     #load 
 
@@ -256,13 +221,12 @@ def HindCast_DataProcess(datelist,Region_list):
 #function to add prediction locations in training dataset but not in the submission format file        
 def addPredictionLocations(Region_list, startdate):
     #load access key
-    home = os.path.expanduser('~')
     print('Making sure all testing locations are in prediction dataframe.')
     #get held out year observational data
     Test = pd.DataFrame()
     cols = ['Date','y_test', 'y_pred','Long', 'Lat', 'elevation_m', 'WYWeek', 'northness', 'VIIRS_SCA', 'hasSnow', 'Region']
     for Region in Region_list:
-        T= pd.read_hdf(f"{home}NSM/Snow-Extrapolation/data/RegionWYTest.h5", Region)
+        T= pd.read_hdf(f"{HOME}SWEML/data/RegionWYTest.h5", Region)
         T['Region'] = Region
         T['y_pred'] = -9999
         T.rename(columns = {'SWE':'y_test'}, inplace = True)
@@ -280,7 +244,7 @@ def addPredictionLocations(Region_list, startdate):
         except:
             rows_not_pred.append(row)
 
-    regions = pd.read_pickle(f"{home}/NSM/Snow-Extrapolation/data/PreProcessed/RegionVal.pkl")
+    regions = pd.read_pickle(f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl")
     regionval = pd.DataFrame()
     Region_list2 = ['N_Sierras', 'S_Sierras']
     for region in Region_list2:
@@ -313,7 +277,7 @@ def addPredictionLocations(Region_list, startdate):
     regionDict['S_Sierras_High'] = regionDict['S_Sierras'][regionDict['S_Sierras']['elevation_m'] > 2500]
 
     # write the python object (dict) to pickle file
-    path = f"{home}/NSM/Snow-Extrapolation/data/PreProcessed/RegionVal2.pkl"
+    path = f"{HOME}/SWEML/data/PreProcessed/RegionVal2.pkl"
     RVal = open(path, "wb")
     pickle.dump(regionDict, RVal)
     
@@ -438,26 +402,11 @@ def Snowgif(datelist, Region_list):
 
 
 def Hindcast_to_AWS(modelname):
-     #load access key
-    home = os.path.expanduser('~')
-    keypath = "apps/AWSaccessKeys.csv"
-    access = pd.read_csv(f"{home}/{keypath}")
-
-    #start session
-    session = boto3.Session(
-        aws_access_key_id=access['Access key ID'][0],
-        aws_secret_access_key=access['Secret access key'][0],
-    )
-    s3 = session.resource('s3')
-    #AWS bucket information
-    bucket_name = 'national-snow-model'
-    #s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
-    bucket = s3.Bucket(bucket_name)
-    
+   
     #push NSM data to AWS
 
     AWSpath = "Hold_Out_Year/"
-    path = f"{home}/NSM/Snow-Extrapolation/contributors/{modelname}/Predictions/{AWSpath}"
+    path = f"{HOME}/SWEML/contributors/{modelname}/Predictions/{AWSpath}"
     files = []
     for file in os.listdir(path):
          # check the files which are end with specific extension
@@ -469,32 +418,18 @@ def Hindcast_to_AWS(modelname):
     print('Pushing files to AWS')
     for file in tqdm(files):
         filepath = f"{path}/{file}"
-        s3.meta.client.upload_file(Filename= filepath, Bucket=bucket_name, Key=f"{modelname}/{AWSpath}{file}")
+        S3.meta.client.upload_file(Filename= filepath, BUCKET=BUCKET_NAME, Key=f"{modelname}/{AWSpath}{file}")
         
 
 def AWS_to_Hindcast(modelname):
     #load access key
-    home = os.path.expanduser('~')
-    keypath = "apps/AWSaccessKeys.csv"
-    access = pd.read_csv(f"{home}/{keypath}")
-
-    #start session
-    session = boto3.Session(
-        aws_access_key_id=access['Access key ID'][0],
-        aws_secret_access_key=access['Secret access key'][0],
-    )
-    s3 = session.resource('s3')
-    #AWS bucket information
-    bucket_name = 'national-snow-model'
-    #s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
-    bucket = s3.Bucket(bucket_name)
-
+    
     files = []
-    for objects in bucket.objects.filter(Prefix=f"{modelname}/Hold_Out_Year/"):
+    for objects in BUCKET.objects.filter(Prefix=f"{modelname}/Hold_Out_Year/"):
         files.append(objects.key)
 
     print('Downloading files from AWS to local')
     for file in tqdm(files):
         filename = file.replace('Neural_Network/Hold_Out_Year/', '')
-        s3.meta.client.download_file(bucket_name, file, f"./Predictions/Hold_Out_Year/{filename}")
+        S3.meta.client.download_file(BUCKET_NAME, file, f"./Predictions/Hold_Out_Year/{filename}")
     

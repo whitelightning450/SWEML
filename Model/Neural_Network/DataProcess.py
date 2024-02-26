@@ -26,32 +26,32 @@ from botocore import UNSIGNED
 from botocore.client import Config
 import os
 
+#load access key
+HOME = os.path.expanduser('~')
+KEYPATH = "SWEML/AWSaccessKeys.csv"
+ACCESS = pd.read_csv(f"{HOME}/{KEYPATH}")
+
+#start session
+SESSION = boto3.Session(
+    aws_access_key_id=ACCESS['Access key ID'][0],
+    aws_secret_access_key=ACCESS['Secret access key'][0],
+)
+S3 = SESSION.resource('s3')
+#AWS BUCKET information
+BUCKET_NAME = 'national-snow-model'
+#S3 = boto3.resource('S3', config=Config(signature_version=UNSIGNED))
+BUCKET = S3.Bucket(BUCKET_NAME)
+
 
 
 # Create .py function to process data to train model. 
 
 def DataProcess(test_year, modelname, Region_list):
     #regions are N_Sierra, S_Sierra_Low, S_Sierra_High
-    
-     #load access key
-    home = os.path.expanduser('~')
-    keypath = "apps/AWSaccessKeys.csv"
-    access = pd.read_csv(f"{home}/{keypath}")
-
-    #start session
-    session = boto3.Session(
-        aws_access_key_id=access['Access key ID'][0],
-        aws_secret_access_key=access['Secret access key'][0],
-    )
-    s3 = session.resource('s3')
-    #AWS bucket information
-    bucket_name = 'national-snow-model'
-    #s3 = boto3.resource('s3', config=Config(signature_version=UNSIGNED))
-    bucket = s3.Bucket(bucket_name)
 
     #store and load region list
     #Region_list = ['N_Sierras', 'S_Sierras_Low', 'S_Sierras_High']
-    #content_object = s3.Object(bucket_name, 'data/Regions.txt')
+    #content_object = s3.Object(BUCKET_name, 'data/Regions.txt')
     #file_content = content_object.get()['Body'].read().decode('utf-8')
     #Region_list = json.loads(file_content)
     
@@ -69,17 +69,17 @@ def DataProcess(test_year, modelname, Region_list):
     #Region_optfeatures= pickle.load(open(f"{training_path}/Optimal_Features.pkl", "rb"))
     #Load Training Data
     #file_key = 'data/RegionTrain_SCA.pkl'
-    #obj = bucket.Object(file_key)
+    #obj = BUCKET.Object(file_key)
     #body = obj.get()['Body']
     #RegionTrain = pd.read_pickle(body)
     RegionTrain = {}
     for Region in Region_list:
-        RegionTrain[Region] = pd.read_hdf(f"{home}/NSM/Snow-Extrapolation/data/VIIRS/RegionTrain_SCA.h5", key = Region)
+        RegionTrain[Region] = pd.read_hdf(f"{home}/SWEML/data/VIIRS/RegionTrain_SCA.h5", key = Region)
         
 
     #load RFE optimized features
     file_key = 'data/Optimal_Features.pkl'
-    obj = bucket.Object(file_key)
+    obj = BUCKET.Object(file_key)
     body = obj.get()['Body']
     Region_optfeatures = pd.read_pickle(body)
 
@@ -160,7 +160,7 @@ def DataProcess(test_year, modelname, Region_list):
         
     #save RegionTest
     #pickle_byte_obj = pickle.dumps(RegionWYTest) 
-    #s3.Object(bucket_name,f"data/RegionWYTest.pkl").put(Body=pickle_byte_obj)  
+    #s3.Object(BUCKET_name,f"data/RegionWYTest.pkl").put(Body=pickle_byte_obj)  
     
     return RegionTrain, RegionTest, RegionObs_Train, RegionObs_Test, RegionTest_notScaled
 
