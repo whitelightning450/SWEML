@@ -1,7 +1,6 @@
 #created by Dr. Ryan C. Johnson as part of the Cooperative Institute for Research to Operations in Hydrology (CIROH)
 # SWEET supported by the University of Alabama and the Alabama Water Institute
 # 10-19-2023
-
 import os
 import pandas as pd
 import warnings
@@ -15,8 +14,26 @@ import glob
 import contextlib
 from PIL import Image
 from IPython.display import Image as ImageShow
+import boto3
+from progressbar import ProgressBar
+from botocore import UNSIGNED
+from botocore.client import Config
+import os
 warnings.filterwarnings("ignore")
 
+#load access key
+HOME = os.path.expanduser('~')
+KEYPATH = "SWEML/AWSaccessKeys.csv"
+ACCESS = pd.read_csv(f"{HOME}/{KEYPATH}")
+
+#start session
+SESSION = boto3.Session(
+    aws_access_key_id=ACCESS['Access key ID'][0],
+    aws_secret_access_key=ACCESS['Secret access key'][0],
+)
+S3 = SESSION.resource('s3')
+BUCKET_NAME = 'national-snow-model'
+BUCKET = S3.Bucket(BUCKET_NAME)
 
 #Function for initializing a hindcast
 def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list): 
@@ -32,33 +49,6 @@ def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list):
 
     #threshold
     threshold = threshold
-
-    #SWE_new = {}
-    #for region in Region_list:
-        #The below file will serve as a starting poinw
-     #   SWE_new[region] = pd.read_hdf(f"{datapath}/data/PreProcessed/predictions{prev_year}-09-24.h5", key = region)
-      #  SWE_new[region].rename(columns = {prev_date:new_date}, inplace = True)
-       # SWE_new[region].to_hdf(f"{cwd}/Predictions/Hold_Out_Year/Predictions/predictions{new_year}-09-25.h5", key = region)
-   
-
-    #set the ground measures features DF    
-    #obs_old = pd.read_csv(f"{datapath}/data/PreProcessed/ground_measures_features_{prev_year}-09-24.csv")
-    #obs_old.rename(columns = {'Unnamed: 0':'station_id', prev_date:new_date}, inplace = True)
-    #obs_old.set_index('station_id', inplace = True)
-    #obs_old[new_date] = 0
-    #obs_old.to_csv(f"{datapath}/data/PreProcessed/ground_measures_features_{new_year}-09-25.csv")
-    #obs_old.to_hdf(f"{datapath}/data/PreProcessed/ground_measures_features.h5", key = f"{new_year}-09-25")
-
-    #print('Ground measures features df complete')
-
-    #load the ground_measures_features meta w/preds
-    #obs_meta_old = pd.read_csv(f"{datapath}/data/PreProcessed/DA_ground_measures_features_{prev_year}-09-24.csv")
-    #obs_meta_old.rename(columns = {'Unnamed: 0':'station_id'}, inplace = True)
-    #obs_meta_old.set_index('station_id', inplace = True)
-    #obs_meta_old['Date'] = new_date
-    #obs_meta_old.to_csv(f"{datapath}/data/PreProcessed/DA_ground_measures_features_{new_year}-09-25.csv")
-    #obs_meta_old.to_hdf(f"{datapath}/data/PreProcessed/DA_ground_measures_features.h5", key =f"{new_year}-09-25")
-    #print('Ground measures features meta df complete')
 
     #Make a submission DF
     old_preds = pd.read_csv(f"{datapath}/data/PreProcessed/submission_format_{prev_date}.csv")
@@ -379,3 +369,19 @@ def Snowgif(cwd, datelist, Region_list):
                  save_all=True, duration=200, loop=0)
     #Display gif    
     return ImageShow(fp_out)
+
+
+def DF_to_AWS(modelname, folderpath, AWSpath, type):
+ 
+    files = []
+    for file in os.listdir(folderpath):
+        if file.endswith(type):
+            files.append(file)
+    print(files)
+
+    #Load and push to AWS
+    pbar = ProgressBar()
+    print('Pushing files to AWS')
+    for file in pbar(files):
+        filepath = f"{folderpath}{file}"
+        S3.meta.client.upload_file(Filename= filepath, Bucket=BUCKET_NAME, Key=f"{modelname}/{AWSpath}{file}")

@@ -183,16 +183,19 @@ def Model_predict(RegionTest, RegionObs_Test, RegionTest_notScaled, Region_list)
         #set up model checkpoint to be able to extract best models
         checkpoint_filepath = f"./Model/{Region}/"
 
+        try:
+            model = keras.models.load_model(f"{checkpoint_filepath}{Region}_model.keras")
+        except:
         #load the model with highest performance
-        bestmodel = [f for f in listdir(checkpoint_filepath) if isfile(join(checkpoint_filepath, f))]
-        bestmodel.sort(key=natural_keys)
-        bestmodel = checkpoint_filepath+bestmodel[0]
-        model=load_model(bestmodel)
-       # print(bestmodel)
-        #save this model
-        model.save(f"{checkpoint_filepath}{Region}_model.keras")
-        #make sure the model loads
-        model = keras.models.load_model(f"{checkpoint_filepath}{Region}_model.keras")
+            bestmodel = [f for f in listdir(checkpoint_filepath) if isfile(join(checkpoint_filepath, f))]
+            bestmodel.sort(key=natural_keys)
+            bestmodel = checkpoint_filepath+bestmodel[0]
+            model=load_model(bestmodel)
+        # print(bestmodel)
+            #save this model
+            model.save(f"{checkpoint_filepath}{Region}_model.keras")
+            #make sure the model loads
+            model = keras.models.load_model(f"{checkpoint_filepath}{Region}_model.keras")
 
 
          #Load SWEmax

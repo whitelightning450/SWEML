@@ -37,3 +37,4 @@ pyarrow==13.0.0
 contextily==1.4.0 
 mercantile==1.2.1
 nbformat
+netCDF4 
