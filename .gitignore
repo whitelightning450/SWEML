@@ -11,3 +11,4 @@ Data/WBD/
 *.h5
 *.pkl
 *.parquet
+/Figures/*
