@@ -104,12 +104,7 @@ def HindCast_DataProcess(datelist,Region_list, cwd, datapath, model):
     Test = pd.DataFrame()
     cols = ['Date','y_test','Long', 'Lat', 'elevation_m', 'WYWeek', 'northness', 'VIIRS_SCA', 'hasSnow', 'Region']
     for Region in Region_list:
-        try:
-            #T= pd.read_hdf(f"{datapath}/data/RegionWYTest.h5", Region)
-            T= pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/RegionWYTest.h5", Region)
-        except:
-            S3.meta.client.download_file(BUCKET_NAME, 'data/RegionWYTest.h5',f"{cwd}/Predictions/Hold_Out_Year/RegionWYTest.h5")
-            T= pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/RegionWYTest.h5", Region)
+        T= pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/RegionWYTest.h5", Region)
         T['Region'] = Region
         #T['y_pred'] = -9999
         T.rename(columns = {'SWE':'y_test'}, inplace = True)
@@ -122,12 +117,15 @@ def HindCast_DataProcess(datelist,Region_list, cwd, datapath, model):
     pred_sites = pd.DataFrame()
     TestsiteData = pd.DataFrame()
     TestsiteDataPSWE = pd.DataFrame()
+    print('Getting prediction files')
     for date in datelist:
         try:
-            preds[date] = pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/Predictions/2019_predictions.h5", key = date)
+            preds[date] = pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/2019_predictions.h5", key = date)
         except:
+            print('No prediction file found, retrieving from AWS')
             S3.meta.client.download_file(BUCKET_NAME, f"{model}/Hold_Out_Year/2019_predictions.h5",f"{cwd}/Predictions/Hold_Out_Year/Predictions/2019_predictions.h5")
             preds[date] = pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/Predictions/2019_predictions.h5", key = date)
+            print('File loaded, proceeding...')
         
         #get previous SWE predictions for DF
         startdate = str(datetime.strptime(date, '%Y-%m-%d').date() -timedelta(7))
@@ -174,7 +172,8 @@ def HindCast_DataProcess(datelist,Region_list, cwd, datapath, model):
             #print(s)
             s['prev_SWE'] = pSWE['prev_SWE']
             pred_sites = pd.concat([pred_sites, s])
-         
+
+    print('Site data processing complete, setting up prediction dataframes...')  
     pswecols = ['Date', 'y_test']
     TestsiteDataPSWE = TestsiteDataPSWE[pswecols]
     TestsiteDataPSWE.rename(columns = {'y_test':'y_test_prev'}, inplace = True)
@@ -196,6 +195,7 @@ def HindCast_DataProcess(datelist,Region_list, cwd, datapath, model):
     TestsiteData['prev_SWE_error'] = TestsiteData['y_test_prev'] - TestsiteData['prev_SWE']
     #Set up dictionary to match the training data
     EvalTest = {}
+    print('Finalizing Evaluation dataframes...')
     for Region in Region_list:
         EvalTest[Region] = TestsiteData[TestsiteData['Region'] == Region]
         EvalTest[Region]['y_pred'] = EvalTest[Region]['y_pred']*2.54
@@ -411,7 +411,10 @@ def AWS_to_Hindcast(modelname):
     for objects in BUCKET.objects.filter(Prefix=f"{modelname}/Hold_Out_Year/"):
         files.append(objects.key)
 
+    files.remove(f"{modelname}/Hold_Out_Year/")
     print('Downloading files from AWS to local')
     for file in tqdm(files):
         filename = file.replace(f"{modelname}/Hold_Out_Year/", '')
-        S3.meta.client.download_file(BUCKET_NAME, file, f"./Predictions/Hold_Out_Year/{filename}")
+        filename = f"{HOME}/SWEML/Model/{modelname}/Predictions/Hold_Out_Year/{filename}"
+        #print(filename)
+        S3.meta.client.download_file(BUCKET_NAME, file, filename)

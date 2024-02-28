@@ -232,14 +232,11 @@ class NSM_SCA(SWE_Prediction):
         # close file
         file.close()
 
-    def SWE_Predict(self, SCA=True, NewSim = True):
+    def SWE_Predict(self, SCA=True, NewSim = True, modelname = 'Neural_Network'):
         # load first SWE observation forecasting dataset with prev and delta swe for observations.
+        self.modelname = modelname
+        path = f"./Predictions/Hold_Out_Year/Prediction_DF_SCA_{self.date}.pkl"
 
-        if SCA:
-            path = f"./Predictions/Hold_Out_Year/Prediction_DF_SCA_{self.date}.pkl"
-        else:
-            path = f"./Predictions/Hold_Out_Year/Prediction_DF_{self.date}.pkl"
-            
         if NewSim == False:
          
             #set up predictions for next timestep
@@ -277,6 +274,8 @@ class NSM_SCA(SWE_Prediction):
 
         for Region in self.Region_list:
             print(Region)
+            if self.modelname =='LSTM':
+                print(self.Predict(Region))
             self.predictions[Region] = self.Predict(Region)
             self.predictions[Region] = pd.DataFrame(self.predictions[Region])
             self.Prev_df = pd.concat([self.Prev_df, self.predictions[Region][[self.date]]])  # pandas 2.0 update
@@ -350,6 +349,9 @@ class NSM_SCA(SWE_Prediction):
             if self.modelname == 'Neural_Network':
                 checkpoint_filepath = f"./Model/{Region}/"
                 model = keras.models.load_model(f"{checkpoint_filepath}{Region}_model.keras")
+            if self.modelname == 'LSTM':
+                checkpoint_filepath = f"./Model/{Region}/"
+                model = keras.models.load_model(f"{checkpoint_filepath}{Region}_model.keras")
             
             # load SWE scaler
             SWEmax = np.load(f"{checkpoint_filepath}{Region}_SWEmax.npy")
@@ -359,8 +361,13 @@ class NSM_SCA(SWE_Prediction):
             scaler = pickle.load(open(f"{checkpoint_filepath}{Region}_scaler.pkl", 'rb'))
             scaled = scaler.transform(forecast_data)
             x_forecast = pd.DataFrame(scaled, columns=forecast_data.columns)
+        
 
             # make predictions and rescale
+            if self.modelname == 'LSTM':
+                x_forecast = x_forecast.to_numpy()
+                x_forecast = x_forecast.reshape(x_forecast.shape[0], 1, x_forecast.shape[1])
+
             y_forecast = (model.predict(x_forecast))
             y_forecast[y_forecast < 0] = 0
             y_forecast = (SWEmax * y_forecast)

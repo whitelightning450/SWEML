@@ -85,6 +85,7 @@ def DataProcess(test_year, modelname, Region_list):
     obj = BUCKET.Object(file_key)
     body = obj.get()['Body']
     Region_optfeatures = pd.read_pickle(body)
+ 
 
     #Split the data the same as original train/test split to make same figures/analysis
     VIIRS_cols = ['Date', 'VIIRS_SCA', 'hasSnow']
@@ -158,7 +159,8 @@ def DataProcess(test_year, modelname, Region_list):
         RegionObs_Test[Region] = pd.DataFrame(y_test, columns = ['SWE'])
         RegionWYTest.to_hdf("./Predictions/Hold_Out_Year/RegionWYTest.h5", Region)
         SWEmax = np.array(SWEmax)
-        np.save(f"./Model/{Region}/{Region}_SWEmax.npy" , SWEmax)
+        print(f"Model/{Region}/{Region}_SWEmax.npy")
+        np.save(f"Model/{Region}/{Region}_SWEmax.npy" , SWEmax)
     
     
     return RegionTrain, RegionTest, RegionObs_Train, RegionObs_Test, RegionTest_notScaled
