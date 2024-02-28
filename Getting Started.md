@@ -28,7 +28,7 @@ I.e., each environment can have its own dependencies or even its own Python vers
 Creating a Python virtual environment is useful if you need different versions of Python or packages for different projects.
 Lastly, a virtual environment keeps things tidy, makes sure your main Python installation stays healthy and supports reproducible and open science.
 
-## Creating Stable CONDA Environment
+## Creating Stable CONDA Environment on CIROH Cloud or other 2i2c Cloud Computing Platform
 Go to home directory
 ```
 cd ~
