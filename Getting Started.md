@@ -85,6 +85,10 @@ Enter the following code block in your Anaconda Command Prompt to get the requir
 
     pip install -r requirements.txt
 
+### Connect to AWS
+All of the data for the project is on a publicly accessible AWS S3 bucket (national-snow-model), however, some methods require credentials. 
+Please request credentials as an issue and put the credentials in the head of the repo (e.g., SWEML) as AWSaccessKeys.csv.
+
 ### Explore the model through an example
 
 The objective of the project is to optimize the NSM, or SSM in this case.
