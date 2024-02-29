@@ -230,7 +230,7 @@ def Slurm_Class_parity(Model_Results, Maritime_Region, Prairie_Region, Alpine_Re
         ax1.plot( group['y_test'],group['y_pred'], marker = 'o', linestyle = ' ', markersize = 2, color='forestgreen', label = name, alpha =.4)
     groups_prairie = Model_Results2.groupby('Region')
     for name, group in groups_prairie:
-        ax1.plot( group['y_test'],group['y_pred'], marker = 'o', linestyle = ' ', markersize = 2, color='gold', label = name, alpha =.2)  
+        ax1.plot( group['y_test'],group['y_pred'], marker = 'o', linestyle = ' ', markersize = 2, color='red', label = name, alpha =.2)  
 
     # groups = Model_Results1.groupby('Region')
     # for name, group in groups:
@@ -242,7 +242,7 @@ def Slurm_Class_parity(Model_Results, Maritime_Region, Prairie_Region, Alpine_Re
         lh.set_alpha(1)
     leg1.legendHandles[0].set_color('royalblue')
     leg1.legendHandles[1].set_color('forestgreen')
-    leg1.legendHandles[2].set_color('gold')
+    leg1.legendHandles[2].set_color('red')
     ax1.plot([0,Model_Results['y_test'].max()], [0,Model_Results['y_test'].max()], color = 'red', linestyle = '--')
     #ax1.set_xlabel('Observed SWE (cm)')
     # ax1.set_ylabel('Predicted SWE (cm)')
@@ -319,7 +319,7 @@ def EvalPlots3(Model_Results, Maritime_Region, Prairie_Region, Alpine_Region, x,
         ax1.plot( group[x],group[y], marker = 'o', linestyle = ' ', markersize = mark_size, color='forestgreen', label = name, alpha =.4)
     groups_prairie = Model_Results2.groupby('Region')
     for name, group in groups_prairie:
-        ax1.plot( group[x],group[y], marker = 'o', linestyle = ' ', markersize = mark_size, color='gold', label = name, alpha =.2)  
+        ax1.plot( group[x],group[y], marker = 'o', linestyle = ' ', markersize = mark_size, color='red', label = name, alpha =.2)  
     
     xmin = min(Model_Results[x])
     xmax = max(Model_Results[x])
@@ -329,7 +329,7 @@ def EvalPlots3(Model_Results, Maritime_Region, Prairie_Region, Alpine_Region, x,
         lh.set_alpha(1)
     leg1.legendHandles[0].set_color('royalblue')
     leg1.legendHandles[1].set_color('forestgreen')
-    leg1.legendHandles[2].set_color('gold')
+    leg1.legendHandles[2].set_color('red')
     ax1.set_title('All Regions')
     ax1.hlines(y=0,xmin = xmin, xmax=xmax, color = 'black', linestyle = '--')
     ax1.set_xlabel(xlabel)
@@ -553,7 +553,7 @@ def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fo
 
     #make figure
     fig, ax = plt.subplots(6,2, figsize=(4, 8))
-    fig.subplots_adjust(hspace=0.3)
+    fig.subplots_adjust(hspace=0.3, wspace=0.3)
     
     ax = ax.ravel()
 
@@ -564,15 +564,16 @@ def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fo
         ax[i].plot(RegionDF.index, RegionDF['y_test']['mean'], color = 'black')
         ax[i].fill_between(RegionDF.index,RegionDF['y_test']['mean'],RegionDF['y_test']['min'],interpolate=True,color='black', alpha=opacity)
         ax[i].fill_between(RegionDF.index,RegionDF['y_test']['mean'],RegionDF['y_test']['max'],interpolate=True,color='black', alpha=opacity)
+        ax[i].tick_params(axis='y', labelsize=fontsize)
         
         if i<4:
             ax[i].plot(RegionDF.index, RegionDF['y_pred']['mean'],  color = 'royalblue')
             ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['min'],interpolate=True,color='darkblue', alpha=opacity*2)
             ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['max'],interpolate=True,color='darkblue', alpha=opacity*2)
         if 4<=i<8:
-            ax[i].plot(RegionDF.index, RegionDF['y_pred']['mean'],  color = 'gold')
-            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['min'],interpolate=True,color='gold', alpha=opacity*2)
-            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['max'],interpolate=True,color='gold', alpha=opacity*2)
+            ax[i].plot(RegionDF.index, RegionDF['y_pred']['mean'],  color = 'red')
+            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['min'],interpolate=True,color='red', alpha=opacity*2)
+            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['max'],interpolate=True,color='red', alpha=opacity*2)
         if i>=8:
             ax[i].plot(RegionDF.index, RegionDF['y_pred']['mean'],  color = 'forestgreen')
             ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['min'],interpolate=True,color='forestgreen', alpha=opacity*2)
@@ -582,20 +583,16 @@ def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fo
         if i<10:
         
             if i%2 == 0:
-                ax[i].set_ylabel('Snow Water \n Equivalent (cm)', fontsize = fontsize)
                 ax[i].set_xticklabels([])
             if i%2 >=0:
                 ax[i].set_xticklabels([])
         else:
 
             if i == 10:
-                ax[i].set_ylabel('Snow Water \n Equivalent (cm)', fontsize = fontsize)
-                ax[i].set_xlabel('Date', fontsize = fontsize)
                 ax[i].tick_params(axis='x', rotation=45, labelsize=fontsize)
 
 
             if i == 11:
-                ax[i].set_xlabel('Date', fontsize = fontsize)
                 ax[i].tick_params(axis='x', rotation=45, labelsize=fontsize)
                 ax[i].plot(RegionDF.index, RegionDF['y_test']['mean'], color = 'black')
                 ax[i].plot(RegionDF.index, RegionDF['y_pred']['mean'],  color = 'forestgreen')
@@ -604,10 +601,12 @@ def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fo
         ax[i].set_title(key, fontsize = fontsize*1.2)
         # Creating legend with color box 
     maritime = mpatches.Patch(color='royalblue', label='Average Regional Maritime Estimates') 
-    prairie = mpatches.Patch(color='gold', label='Average Regional Prairie Estimates') 
+    prairie = mpatches.Patch(color='red', label='Average Regional Prairie Estimates') 
     alpine = mpatches.Patch(color='forestgreen', label='Average Regional Alpine Estimates')
     obs = mpatches.Patch(color='black', label='Average Observations')
 
+    fig.text(0.06, 0.5, 'Snow Water Equivalent (cm)', ha='center', va='center', rotation='vertical', fontsize= fontsize*1.2)
+    fig.text(0.5, 0.06, 'Datetime', ha='center', va='center', fontsize= fontsize*1.2)
     plt.legend( handles=[maritime,prairie, alpine, obs], loc = 'lower center', bbox_to_anchor = (0, 0, 1, 1),  bbox_transform = plt.gcf().transFigure, ncol = 2, fontsize = fontsize)
     plt.savefig(f"./Predictions/Hold_Out_Year/Paper_Figures/{plotname}.png", dpi = 600, box_inches = 'tight')
     return RegionDict, RegionAll
