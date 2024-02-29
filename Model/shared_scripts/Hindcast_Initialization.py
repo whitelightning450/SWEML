@@ -410,8 +410,8 @@ def AWS_to_Hindcast(modelname):
     files = []
     for objects in BUCKET.objects.filter(Prefix=f"{modelname}/Hold_Out_Year/"):
         files.append(objects.key)
-
-    files.remove(f"{modelname}/Hold_Out_Year/")
+    if f"{modelname}/Hold_Out_Year/" in files:
+        files.remove(f"{modelname}/Hold_Out_Year/")
     print('Downloading files from AWS to local')
     for file in tqdm(files):
         filename = file.replace(f"{modelname}/Hold_Out_Year/", '')
