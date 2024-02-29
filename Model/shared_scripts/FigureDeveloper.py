@@ -17,6 +17,11 @@ import matplotlib.ticker as ticker
 from matplotlib.gridspec import GridSpec
 import contextily as cx
 import matplotlib.patches as mpatches 
+import geopandas as gpd
+import xyzservices.providers as xyz
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+import numpy as np
+
 
 
 warnings.filterwarnings("ignore")
@@ -476,7 +481,7 @@ def SWE_TS_plot(datelist, df, regions, plotname):
     
     
 #plot time series of regionally average obs and preds
-def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fontsize):
+def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fontsize, opacity):
     
     RegionAll = regions1+regions2+regions3
 
@@ -492,7 +497,8 @@ def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fo
             RegionDF = pd.concat([RegionDF, RegionDate])
 
         RegionDF.index = pd.to_datetime(RegionDF.index)
-        RegionDF = RegionDF.resample('D').mean().dropna()
+        #RegionDF = RegionDF.resample('D').mean().dropna()
+        RegionDF = RegionDF.resample('D', base=0).agg(['min','max','mean']).round(1).dropna()
         if region == 'N_Sierras':
             name = 'Northern Sierra Nevada'
         elif region == 'S_Sierras_High':
@@ -546,7 +552,8 @@ def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fo
     print(keys)
 
     #make figure
-    fig, ax = plt.subplots(6,2, figsize=(6, 12))
+    fig, ax = plt.subplots(6,2, figsize=(4, 8))
+    fig.subplots_adjust(hspace=0.3)
     
     ax = ax.ravel()
 
@@ -554,14 +561,22 @@ def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fo
         key = keys[i]
         RegionDF = RegionDict[key]
         
-        ax[i].plot(RegionDF.index, RegionDF.y_test, color = 'blue')
+        ax[i].plot(RegionDF.index, RegionDF['y_test']['mean'], color = 'black')
+        ax[i].fill_between(RegionDF.index,RegionDF['y_test']['mean'],RegionDF['y_test']['min'],interpolate=True,color='black', alpha=opacity)
+        ax[i].fill_between(RegionDF.index,RegionDF['y_test']['mean'],RegionDF['y_test']['max'],interpolate=True,color='black', alpha=opacity)
         
         if i<4:
-            ax[i].plot(RegionDF.index, RegionDF.y_pred,  color = 'orange')
+            ax[i].plot(RegionDF.index, RegionDF['y_pred']['mean'],  color = 'royalblue')
+            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['min'],interpolate=True,color='darkblue', alpha=opacity*2)
+            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['max'],interpolate=True,color='darkblue', alpha=opacity*2)
         if 4<=i<8:
-            ax[i].plot(RegionDF.index, RegionDF.y_pred,  color = 'black')
+            ax[i].plot(RegionDF.index, RegionDF['y_pred']['mean'],  color = 'gold')
+            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['min'],interpolate=True,color='gold', alpha=opacity*2)
+            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['max'],interpolate=True,color='gold', alpha=opacity*2)
         if i>=8:
-            ax[i].plot(RegionDF.index, RegionDF.y_pred,  color = 'red')
+            ax[i].plot(RegionDF.index, RegionDF['y_pred']['mean'],  color = 'forestgreen')
+            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['min'],interpolate=True,color='forestgreen', alpha=opacity*2)
+            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['max'],interpolate=True,color='forestgreen', alpha=opacity*2)
         
         
         if i<10:
@@ -576,24 +591,109 @@ def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fo
             if i == 10:
                 ax[i].set_ylabel('Snow Water \n Equivalent (cm)', fontsize = fontsize)
                 ax[i].set_xlabel('Date', fontsize = fontsize)
-                ax[i].tick_params(axis='x', rotation=45)
+                ax[i].tick_params(axis='x', rotation=45, labelsize=fontsize)
 
 
             if i == 11:
                 ax[i].set_xlabel('Date', fontsize = fontsize)
-                ax[i].tick_params(axis='x', rotation=45)
-                ax[i].plot(RegionDF.index, RegionDF.y_test, color = 'blue')
-                ax[i].plot(RegionDF.index, RegionDF.y_pred,  color = 'red')
+                ax[i].tick_params(axis='x', rotation=45, labelsize=fontsize)
+                ax[i].plot(RegionDF.index, RegionDF['y_test']['mean'], color = 'black')
+                ax[i].plot(RegionDF.index, RegionDF['y_pred']['mean'],  color = 'forestgreen')
 
-        #ax[0,0].set_xlabel('Date', fontsize = fontsize)
+      
         ax[i].set_title(key, fontsize = fontsize*1.2)
         # Creating legend with color box 
-    maritime = mpatches.Patch(color='orange', label='Average Regional Maritime Estimates') 
-    prairie = mpatches.Patch(color='black', label='Average Regional Prairie Estimates') 
-    alpine = mpatches.Patch(color='red', label='Average Regional Alpine Estimates')
-    obs = mpatches.Patch(color='blue', label='Average Observations')
-    #plt.legend(handles=[pop_a,pop_b]) 
+    maritime = mpatches.Patch(color='royalblue', label='Average Regional Maritime Estimates') 
+    prairie = mpatches.Patch(color='gold', label='Average Regional Prairie Estimates') 
+    alpine = mpatches.Patch(color='forestgreen', label='Average Regional Alpine Estimates')
+    obs = mpatches.Patch(color='black', label='Average Observations')
+
     plt.legend( handles=[maritime,prairie, alpine, obs], loc = 'lower center', bbox_to_anchor = (0, 0, 1, 1),  bbox_transform = plt.gcf().transFigure, ncol = 2, fontsize = fontsize)
     plt.savefig(f"./Predictions/Hold_Out_Year/Paper_Figures/{plotname}.png", dpi = 600, box_inches = 'tight')
     return RegionDict, RegionAll
     plt.show()
+
+def SSM_Fig(datelist, Region_list,variant):
+    
+    #Load prediction file with geospatial information
+    path = f"./Predictions/Hold_Out_Year/Prediction_DF_SCA_2018-10-02.pkl"
+    geofile =open(path, "rb")
+    geofile = pickle.load(geofile)
+    cols = ['Long', 'Lat']
+
+    #convet to one dataframe
+    geo_df = pd.DataFrame()
+    for Region in Region_list:
+        geofile[Region] = geofile[Region][cols]
+        geo_df = pd.concat([geo_df, geofile[Region]])
+
+    #convert to geodataframe
+    geo_df = gpd.GeoDataFrame(
+        geo_df, geometry=gpd.points_from_xy(geo_df.Long, geo_df.Lat), crs="EPSG:4326"
+    )
+
+    path = f"./Predictions/Hold_Out_Year/2019_predictions.h5"
+    #get predictions for each timestep
+    print('processing predictions into geodataframe')
+    for date in tqdm(datelist):
+        pred = pd.read_hdf(path, key = date)
+        geo_df[date] = pred[date]*2.54 #convert to cm
+
+
+    #convert to correct crs.
+    geo_df = geo_df.to_crs(epsg=3857)
+
+    print('creating figures for each prediction timestep') #This could be threaded/multiprocessed to speed up
+    for date in tqdm(datelist):
+    #date = "2019-03-26"
+        cols = ['geometry', date]
+        plotdf = geo_df[cols]
+        fig, ax = plt.subplots(figsize=(10, 10))
+        #plot only locations with SWE
+        plotdf = plotdf[plotdf[date] > 0]
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.1)
+        ax = plotdf.plot(date, 
+                     figsize=(3, 5), 
+                     alpha=0.5, 
+                     markersize = 6,
+                     edgecolor="k", 
+                     vmin =1, 
+                     vmax =250,
+                    legend = True,
+                    legend_kwds={"label": "Snow Water Equivalent (cm)", "orientation": "vertical"},
+                    ax = ax,
+                    cax= cax)
+        ax.set_xlim(-1.365e7, -1.31e7)
+        #ax.set_ylim(4.25e6, 5.25e6)
+        ax.set_ylim(4.32e6, 4.62e6)
+        cx.add_basemap(ax, source="https://server.arcgisonline.com/ArcGIS/rest/services/"+variant+"/MapServer/tile/{z}/{y}/{x}")   #cx.providers.OpenStreetMap.Mapnik)
+        ax.set_axis_off()
+        ax.text(-1.345e7, 4.64e6, f"SWE estimate: {date}", fontsize =14)
+        #plt.title( f"SWE estimate: {date}", fontsize =14)
+        #plt.title(f"SWE estimate: {date}")
+        plt.savefig(f"./Predictions/Hold_Out_Year/Paper_Figures/SWE_{date}.png", dpi =600, bbox_inches='tight')
+        plt.show()
+        plt.close(fig)
+
+def slurmNSE(df, slurm_class):
+    regionsNSE = []
+    for region in slurm_class:
+        sites = df[region].index.unique()
+
+        NSE = []
+        cols = ['y_test', 'y_pred']
+        for site in sites:
+            sitedf = df[region][df[region].index ==site][cols]
+            #0's are causing issues
+            sitedf['y_pred'][sitedf['y_pred']<0.1]=0.1
+            sitedf['y_test'][sitedf['y_test']<0.1]=0.1
+            #display(sitedf.head(40))
+            sitense = he.nse(sitedf['y_pred'].values,sitedf['y_test'].values)
+            NSE.append(sitense)
+            #change values less than 0 to 0
+            NSE = [0 if b < 0 else b for b in NSE]
+        regionsNSE = regionsNSE + NSE
+        regionsNSE.sort()
+        
+    return np.array(regionsNSE)
