@@ -87,6 +87,37 @@ def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list, fre
         #print(dt.strftime("%Y-%m-%d"))
         dt=dt.strftime('%Y-%m-%d')
         datelist.append(dt)
+    
+    #need to bring in a prediction folder template 2018-09-25
+    key = f"data/Prediction_DF_SCA_2018-09-25.pkl"      
+    path = f"Predictions/Hold_Out_Year/{frequency}/Prediction_DF_SCA_{start_dt-timedelta(day_delta)}.pkl"
+    S3.meta.client.download_file(BUCKET_NAME, key,path)
+    PSCA = open(path, "rb")
+    PSCA = pd.read_pickle(PSCA)
+    for region in Region_list:
+        PSCA[region].rename(columns ={'2018-09-25':str(pd.to_datetime(start_dt)-timedelta(day_delta))[:10]}, inplace = True)
+    pickle.dump(PSCA, open(path, "wb"))
+        
+    
+    try:
+        obs_path = f"{HOME}/SWEML/data/PreProcessed/DA_ground_measures_features.h5"
+        temp = pd.read_hdf(obs_path, key = str(pd.to_datetime(start_dt)-timedelta(day_delta))[:10])
+    except:
+        key = f"data/PreProcessed/DA_ground_measures_features.h5"
+        obs_path = f"{HOME}/SWEML/data/PreProcessed/DA_ground_measures_features.h5"
+        S3.meta.client.download_file(BUCKET_NAME, key,obs_path)
+        temp = pd.read_hdf(obs_path, key = '2018-09-25')
+        temp['Date'] = str(pd.to_datetime(start_dt)-timedelta(day_delta))[:10]
+        temp.to_hdf(obs_path, key = str(pd.to_datetime(start_dt)-timedelta(day_delta))[:10])
+        
+    try:
+        regions = pd.read_pickle(f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl")
+    except:
+        key = f"data/PreProcessed/RegionVal.pkl"            
+        S3.meta.client.download_file(BUCKET_NAME, key,f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl")
+        regions = pd.read_pickle(f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl")
+        
+    
         
      #makes sure all prediction locations for testing are included in the simulation   
     #addPredictionLocations(Region_list, datapath, cwd, datelist[0])

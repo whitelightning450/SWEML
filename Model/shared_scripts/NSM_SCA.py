@@ -48,6 +48,7 @@ import boto3
 from botocore import UNSIGNED
 from botocore.client import Config
 import os
+import zipfile
 
 warnings.filterwarnings("ignore")
 
@@ -70,7 +71,7 @@ BUCKET = S3.Bucket(BUCKET_NAME)
 
 class NSM_SCA(SWE_Prediction):
 
-    def __init__(self, date: Union[str, datetime], delta=7, timeDelay=3, threshold=0.2, Regions = ['N_Sierras'], modelname = 'Neural_Network', frequency = 'Weekly'):
+    def __init__(self, date: Union[str, datetime], timeDelay=3, threshold=0.2, Regions = ['N_Sierras'], modelname = 'Neural_Network', frequency = 'Weekly'):
         """
             Initializes the NSM_SCA class by calling the superclass constructor.
 
@@ -89,7 +90,7 @@ class NSM_SCA(SWE_Prediction):
         self.Regions = Regions
         
         # Call superclass constructor
-        SWE_Prediction.__init__(self, date=date.strftime("%Y-%m-%d"), delta=delta, Regions = self.Regions)
+        SWE_Prediction.__init__(self, date=date.strftime("%Y-%m-%d"), frequency = frequency, Regions = self.Regions)
 
         self.timeDelay = timeDelay
         self.delayedDate = date - pd.Timedelta(days=timeDelay)
@@ -104,11 +105,25 @@ class NSM_SCA(SWE_Prediction):
             self.folder = f"WY{str(int(self.date[:4]))}"
             self.year = str(int(self.date[:4]))
 
-        self.SCA_folder = f"{HOME}/SWEML/data/VIIRS/{self.folder}/"
+        self.SCA_directory = f"{HOME}/SWEML/data/VIIRS/{self.folder}/"
         self.threshold = threshold * 100  # Convert percentage to values used in VIIRS NDSI
         self.modelname = modelname
         self.frequency = frequency
-
+        if frequency == 'Weekly':
+            self.delta = 7
+        if frequency == 'Daily':
+            self.delta = 1
+        
+        #get data if folder does not exist
+        if os.path.exists(self.SCA_directory)== False:
+            print('Getting VIIRS fSCA files')
+            key = f"data/VIIRS/WY{self.year}.zip"            
+            S3.meta.client.download_file(BUCKET_NAME, key,f"{HOME}/SWEML/data/VIIRS/WY{self.year}.zip")
+            with zipfile.ZipFile(f"{HOME}/SWEML/data/VIIRS/WY{self.year}.zip", 'r') as Z:
+                for elem in Z.namelist() :
+                    Z.extract(elem, f"{HOME}/SWEML/data/VIIRS/WY{self.year}/")
+                #zip_ref.extractall(f"{HOME}/SWEML/data/VIIRS/WY{self.year}/")
+        self.SCA_folder = f"{self.SCA_directory}{int(self.year)-1}-{self.year}NASA/"
 
 
     def initializeGranules(self, getdata = False):
@@ -131,13 +146,20 @@ class NSM_SCA(SWE_Prediction):
             #Get the prediction extent
             bbox = self.getPredictionExtent()
             dataFolder = self.SCA_folder
+            
+            try:
+                self.granules = gpd.read_parquet(f"{HOME}/SWEML/data/VIIRS/Granules.parquet") 
+            except:
+                key = f"data/VIIRS/Granules.parquet"            
+                S3.meta.client.download_file(BUCKET_NAME, key,f"{HOME}/SWEML/data/VIIRS/Granules.parquet")
+                self.granules = gpd.read_parquet(f"{HOME}/SWEML/data/VIIRS/Granules.parquet")
+                print('Granules loaded')
 
 
             #putting in try except to speed up predictions if files are already downloaded
             try:
                 DOY = str(date(int(self.date[:4]), int(self.date[5:7]), int(self.date[8:])).timetuple().tm_yday)
                 self.DOYkey = self.date[:4]+DOY
-                self.granules = gpd.read_parquet(f"{HOME}/SWEML/data/VIIRS/Granules.parquet") 
                 self.granules.sort_values('h', inplace = True)
                 files = [v for v in os.listdir(self.SCA_folder) if self.DOYkey in v]
                 files = [x for x in files if x.endswith('tif')]
@@ -159,12 +181,8 @@ class NSM_SCA(SWE_Prediction):
             Returns:
                 extent (list[float, float, float, float]): The extent of the prediction dataframe.
         """
-        #regions = pd.read_pickle(f"{self.datapath}/data/PreProcessed/RegionVal.pkl")
-        regions = pd.read_pickle(f"{HOME}/SWEML/data/PreProcessed/RegionVal2.pkl")
-    #pkl file workaround, 2i2c is not playing nice with pkl files, changed to h5
-        #regions = {}
-        #for Region in self.Regions:
-         #   regions[Region] = pd.read_hdf(f"{self.datapath}/data/PreProcessed/RegionVal2.h5", key = Region)
+
+        regions = pd.read_pickle(f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl")
 
         self.superset = []
 
@@ -241,7 +259,7 @@ class NSM_SCA(SWE_Prediction):
         if NewSim == False:
          
             #set up predictions for next timestep
-            fdate = pd.to_datetime(self.date)+timedelta(7)
+            fdate = pd.to_datetime(self.date)+timedelta(self.delta)
             fdate = fdate.strftime("%Y-%m-%d")
 
             try:

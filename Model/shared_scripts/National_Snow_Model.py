@@ -57,7 +57,7 @@ from botocore.client import Config
 import os
 
 # import contextily as ctx
-#import ulmo
+import ulmo
 from datetime import timedelta
 
 warnings.filterwarnings("ignore")
@@ -80,10 +80,14 @@ BUCKET = S3.Bucket(BUCKET_NAME)
 
 
 class SWE_Prediction():
-    def __init__(self, date, delta=7, Regions= ['N_Sierras']):
+    def __init__(self, date, frequency = 'Weekly', Regions= ['N_Sierras']):
+            #set day_delta
+        if frequency == 'Weekly':
+            self.delta = 7
+        if frequency == 'Daily':
+            self.delta = 1
         self.date = date
-        self.delta = delta
-        self.prevdate = pd.to_datetime(date) - timedelta(days=delta)
+        self.prevdate = pd.to_datetime(date) - timedelta(days=self.delta)
         self.prevdate = self.prevdate.strftime('%Y-%m-%d')
         self.Regions = Regions
 
@@ -91,31 +95,6 @@ class SWE_Prediction():
 
         # Define Model Regions
         self.Region_list = Regions
-        #['N_Sierras',
-                           # 'S_Sierras_High',
-                           # 'S_Sierras_Low']
-        #,
-          #                  'Greater_Yellowstone',
-           #                 'N_Co_Rockies',
-            #                'SW_Mont',
-             #               'SW_Co_Rockies',
-              #              'GBasin',
-               #             'N_Wasatch',
-                #            'N_Cascade',
-                 #           'S_Wasatch',
-                  #          'SW_Mtns',
-                   #         'E_WA_N_Id_W_Mont',
-                    #        'S_Wyoming',
-                     #       'SE_Co_Rockies',
-                      #      'Sawtooth',
-                       #     'Ca_Coast',
-                        #    'E_Or',
-                         #   'N_Yellowstone',
-                          #  'S_Cascade',
-                           # 'Wa_Coast',
-                            #'Greater_Glacier',
-                           # 'Or_Coast'
-                           # ]
 
         # Original Region List needed to remove bad features
         OG_Region_list = Regions.copy()
@@ -127,34 +106,12 @@ class SWE_Prediction():
         if 'S_Sierras_Low' in OG_Region_list:
             OG_Region_list.remove('S_Sierras_Low')
             OG_Region_list.append('S_Sierras')
-
+        OG_Region_list = list(set(OG_Region_list))
 
         res = []
         [res.append(x) for x in OG_Region_list if x not in res]
 
         self.OG_Region_list = res
-                                      #,
-          #                  'Greater_Yellowstone',
-           #                 'N_Co_Rockies',
-            #                'SW_Mont',
-             #               'SW_Co_Rockies',
-              #              'GBasin',
-               #             'N_Wasatch',
-                #            'N_Cascade',
-                 #           'S_Wasatch',
-                  #          'SW_Mtns',
-                   #         'E_WA_N_Id_W_Mont',
-                    #        'S_Wyoming',
-                     #       'SE_Co_Rockies',
-                      #      'Sawtooth',
-                       #     'Ca_Coast',
-                        #    'E_Or',
-                         #   'N_Yellowstone',
-                          #  'S_Cascade',
-                           # 'Wa_Coast',
-                            #'Greater_Glacier',
-                           # 'Or_Coast'
-                           # ]
 
     # make Region identifier. The data already includes Region, but too many 'other' labels
 
@@ -446,6 +403,8 @@ class SWE_Prediction():
 
     def get_SNOTEL_Threaded(self, sitecode, start_date, end_date):
         # print(sitecode)
+        
+        self.SNOTELtest = {}
 
         # This is the latest CUAHSI API endpoint
         wsdlurl = 'https://hydroportal.cuahsi.org/Snotel/cuahsi_1_1.asmx?WSDL'
@@ -457,71 +416,68 @@ class SWE_Prediction():
         try:
             # Request data from the server
             site_values = ulmo.cuahsi.wof.get_values(wsdlurl, sitecode, variablecode, start=start_date, end=end_date)
-
             end_date = end_date.strftime('%Y-%m-%d')
             # Convert to a Pandas DataFrame
             SNOTEL_SWE = pd.DataFrame.from_dict(site_values['values'])
             # Parse the datetime values to Pandas Timestamp objects
-            SNOTEL_SWE['datetime'] = pd.to_datetime(SNOTEL_SWE['datetime'], utc=True)
-            # Set the DataFrame index to the Timestamps
-            SNOTEL_SWE = SNOTEL_SWE.set_index('datetime')
+            SNOTEL_SWE['datetime'] = pd.to_datetime(SNOTEL_SWE['datetime'], utc=True).values
+            SNOTEL_SWE.set_index('datetime', inplace = True)
             # Convert values to float and replace -9999 nodata values with NaN
             SNOTEL_SWE['value'] = pd.to_numeric(SNOTEL_SWE['value']).replace(-9999, np.nan)
             # Remove any records flagged with lower quality
             SNOTEL_SWE = SNOTEL_SWE[SNOTEL_SWE['quality_control_level_code'] == '1']
-
-            # SNOTEL_SWE['station_id'] = sitecode
-            # SNOTEL_SWE.index = SNOTEL_SWE.station_id
-            # SNOTEL_SWE = SNOTEL_SWE.rename(columns = {'value':end_date})
-            # col = [end_date]
-            # SNOTEL_SWE = SNOTEL_SWE[col].iloc[-1:]
             self.SWE_df[self.date].loc[sitecode] = SNOTEL_SWE['value'].values[0]
 
         except Exception as e:
-            # print('Unable to fetch SWE data for site ', sitecode, 'SWE value: -9999')
-            # end_date=end_date.strftime('%Y-%m-%d')
-            # SNOTEL_SWE = pd.DataFrame(-9999, columns = ['station_id', end_date], index =[1])
-            # SNOTEL_SWE['station_id'] = sitecode
-            # SNOTEL_SWE = SNOTEL_SWE.set_index('station_id')
             self.SWE_df[self.date].loc[sitecode] = -9999
+            print(f"Snotel data fail, {sitecode}")
 
-        # frames = [self.SWE_df, SNOTEL_SWE]
-        # self.SWE_df = pd.concat(frames)
-        # return SNOTEL_SWE
 
     def get_CDEC_Threaded(self, station_id, sensor_id, resolution, start_date, end_date):
+        
 
         try:
             url = 'https://cdec.water.ca.gov/dynamicapp/selectQuery?Stations=%s' % (station_id) + '&SensorNums=%s' % (
                 sensor_id) + '&dur_code=%s' % (resolution) + '&Start=%s' % (start_date) + '&End=%s' % (end_date)
             CDEC_SWE = pd.read_html(url)[0]
+            if CDEC_SWE.columns[0] != 'DATE':
+                CDEC_SWE = pd.read_html(url)[1]
             CDEC_station_id = 'CDEC:' + station_id
             CDEC_SWE['station_id'] = CDEC_station_id
             CDEC_SWE = CDEC_SWE.set_index('station_id')
             CDEC_SWE = pd.DataFrame(CDEC_SWE.iloc[-1]).T
-            col = ['SNOW WC INCHES']
-            CDEC_SWE = CDEC_SWE[col]
-            CDEC_SWE = CDEC_SWE.rename(columns={'SNOW WC INCHES': end_date})
+            cols = CDEC_SWE.columns
+            CDEC_SWE.rename(columns={cols[1]: end_date}, inplace =  True)
+            if CDEC_SWE[end_date].values[0] =='--':
+                CDEC_SWE[end_date] = -999
             self.SWE_df[self.date].loc[CDEC_station_id] = CDEC_SWE[end_date].values[0]
+            
 
         except:
+            url = 'https://cdec.water.ca.gov/dynamicapp/selectQuery?Stations=%s' % (station_id) + '&SensorNums=%s' % (
+                sensor_id) + '&dur_code=%s' % (resolution) + '&Start=%s' % (start_date) + '&End=%s' % (end_date)
             # print('Unable to fetch SWE data for site ', station_id, 'SWE value: -9999')
             CDEC_SWE = pd.DataFrame(-9999, columns=['station_id', end_date], index=[1])
             CDEC_station_id = 'CDEC:' + station_id
             CDEC_SWE['station_id'] = CDEC_station_id
             CDEC_SWE = CDEC_SWE.set_index('station_id')
             self.SWE_df[self.date].loc[CDEC_station_id] = CDEC_SWE[end_date]
-
-        # frames = [self.SWE_df, CDEC_SWE]
-        # self.SWE_df = pd.concat(frames)
-        # return CDEC_SWE
+            #self.CDEC[f"{station_id}-fail"] = CDEC_SWE
+            print(f"CDEC data fail, {url}")
 
     def Get_Monitoring_Data_Threaded(self, getdata = False):
         if getdata == False:
             print('Monitoring station observations set to preloaded data')
         
         if getdata ==True:
-            GM_template = pd.read_csv(self.datapath + '/data/PreProcessed/ground_measures_features_template.csv')
+            try:
+                GM_template = pd.read_csv(f"Predictions/Hold_Out_Year/{self.frequency}/ground_measures_features_template.csv")
+            except:
+                key = f"data/PreProcessed/ground_measures_features_template.csv"
+                S3.meta.client.download_file(BUCKET_NAME, key,f"Predictions/Hold_Out_Year/{self.frequency}/ground_measures_features_template.csv")
+                GM_template = pd.read_csv(f"Predictions/Hold_Out_Year/{self.frequency}/ground_measures_features_template.csv")
+                  
+                  
             GM_template = GM_template.rename(columns={'Unnamed: 0': 'station_id'})
             GM_template.index = GM_template['station_id']
             cols = ['Date']
@@ -591,20 +547,41 @@ class SWE_Prediction():
             date = date.strftime('%Y-%m-%d')
 
             self.SWE_df = self.SWE_df[~self.SWE_df.index.duplicated(keep='first')]
+            
+            #fix na sites with regional average
+            CDECsites = self.SWE_df.loc['CDEC:ADM':'CDEC:WWC']
+            meanSWE = CDECsites[CDECsites[date]>=0].mean().values[0]
+            self.SWE_df[self.SWE_df[date]==-999.00]=meanSWE
 
             # remove -- from CDEC predictions and make df a float
             self.SWE_df[date] = self.SWE_df[date].astype(str)
             self.SWE_df[date] = self.SWE_df[date].replace(['--'], -9999)
             self.SWE_df[date] = pd.to_numeric(self.SWE_df[date], errors='coerce')
             self.SWE_df[date] = self.SWE_df[date].fillna(-9999)
+            
+            self.SWE_df.reset_index(inplace=True)
+            self.SWE_df = self.SWE_df.rename(columns={'index': 'station_id'})
+            self.SWE_df = self.SWE_df.set_index('station_id')
+            
+            #Get state average SNOTEL to fill in nans
+            states = ['WA', 'OR', 'CA', 'ID', 'NV', 'AZ', 'MT', 'WY', 'UT', 'CO','NM', 'SD']
+            for state in states:
+                s = self.SWE_df.copy()
+                s.reset_index(inplace = True)
+                stateSnotel = s[s['station_id'].str.contains(state)].copy()
+                mean = stateSnotel[stateSnotel[date]>=0][date].mean()
+                stateSnotel[date][stateSnotel[date] < 0] = mean
+                stateSnotel.set_index('station_id', inplace = True)
+                #update SWE_df
+                self.SWE_df.update(stateSnotel)
 
             NegSWE = self.SWE_df[self.SWE_df[date].between(-10, -.1)].copy()
             NegSWE[date] = 0
 
             self.SWE_df.update(NegSWE)
-            self.SWE_df.reset_index(inplace=True)
-            self.SWE_df = self.SWE_df.rename(columns={'index': 'station_id'})
-            self.SWE_df = self.SWE_df.set_index('station_id')
+            # self.SWE_df.reset_index(inplace=True)
+            # self.SWE_df = self.SWE_df.rename(columns={'index': 'station_id'})
+            # self.SWE_df = self.SWE_df.set_index('station_id')
 
             #self.SWE_df.to_csv(f"{HOME}/SWEML/data/PreProcessed/ground_measures_features_{date}.csv")
             self.SWE_df.to_hdf(f"{HOME}/SWEML/data/PreProcessed/ground_measures_features.h5", key = date)
@@ -621,8 +598,9 @@ class SWE_Prediction():
         # load ground truth values (SNOTEL): previous week, these have Na values filled by prev weeks obs +/- mean region Delta SWE
         #obs_path = self.datapath + '/data/PreProcessed/DA_ground_measures_features_' + self.prevdate + '.csv'
         #self.GM_Prev = pd.read_csv(obs_path)
+
         obs_path = f"{HOME}/SWEML/data/PreProcessed/DA_ground_measures_features.h5"
-        self.GM_Prev = pd.read_hdf(obs_path, key = self.prevdate)
+        self.GM_Prev = pd.read_hdf(obs_path, key = self.prevdate)          
         
         
         colrem = ['Region', 'Prev_SWE', 'Delta_SWE']
@@ -630,19 +608,19 @@ class SWE_Prediction():
 
         # All coordinates of 1 km polygon used to develop ave elevation, ave slope, ave aspect
         #path = self.datapath + '/data/PreProcessed/RegionVal.pkl'  # TODO change to RegionVals?
-        #path = f"{HOME}/SWEML/data/PreProcessed/RegionVal2.pkl"
         path = f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl"
+        #path = f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl"
         # load regionalized geospatial data
         self.RegionTest = open(path, "rb")
         self.RegionTest = pd.read_pickle(self.RegionTest)
 
-        ### Load H5 previous prediction files into dictionary - Now pkl files
+        ### Load previous prediction files into dictionary - Now pkl files
 
         #self.prev_SWE = {}
         if SCA == True:
-            path = f"./Predictions/Hold_Out_Year/Prediction_DF_SCA_{self.prevdate}.pkl"
+            path = f"Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_SCA_{self.prevdate}.pkl"
         if SCA == False:
-            path = f"./Predictions/Hold_Out_Year/Prediction_DF_{self.prevdate}.pkl"
+            path = f"Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_{self.prevdate}.pkl"
         
         self.prev_SWE = open(path, 'rb')
         self.prev_SWE = pd.read_pickle(self.prev_SWE)
@@ -669,7 +647,13 @@ class SWE_Prediction():
         self.GM_Test = self.GM_Test.rename(columns={'variable': 'Date', 'value': 'SWE'})
 
         # load ground truth meta
-        self.GM_Meta = pd.read_csv(f"{HOME}/SWEML/data/PreProcessed/ground_measures_metadata.csv")
+        try:
+            self.GM_Meta = pd.read_csv(f"{HOME}/SWEML/data/PreProcessed/ground_measures_metadata.csv")
+        except:
+            key = f"data/PreProcessed/ground_measures_metadata.csv"
+            obs_path = f"{HOME}/SWEML/data/PreProcessed/ground_measures_metadata.csv"
+            S3.meta.client.download_file(BUCKET_NAME, key,obs_path)
+            self.GM_Meta = pd.read_csv(f"{HOME}/SWEML/data/PreProcessed/ground_measures_metadata.csv")
 
         # merge testing ground truth location metadata with snotel data
         self.GM_Test = self.GM_Meta.merge(self.GM_Test, how='inner', on='station_id')
@@ -793,7 +777,7 @@ class SWE_Prediction():
             # save dictionaries as pkl
         # create a binary pickle file 
     
-        path = f"./Predictions/Hold_Out_Year/Prediction_DF_{self.date}.pkl"
+        path = f"Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_{self.date}.pkl"
 
         RVal = open(path, "wb")
 
@@ -2012,7 +1996,7 @@ if __name__ == "__main__":
 
     # can be altered to create list every n number of days by changing 7 to desired skip length
     def daterange(start_date, end_date):
-        for n in range(0, int((end_date - start_date).days) + 1, 7):  # TODO replace with self.delta
+        for n in range(0, int((end_date - start_date).days) + 1, self.delta):  # TODO replace with self.delta
             yield start_date + timedelta(n)
 
 
