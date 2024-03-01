@@ -21,10 +21,25 @@ import geopandas as gpd
 import xyzservices.providers as xyz
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
-
-
-
+import boto3
+from progressbar import ProgressBar
+from botocore import UNSIGNED
+from botocore.client import Config
 warnings.filterwarnings("ignore")
+
+#load access key
+HOME = os.path.expanduser('~')
+KEYPATH = "SWEML/AWSaccessKeys.csv"
+ACCESS = pd.read_csv(f"{HOME}/{KEYPATH}")
+
+#start session
+SESSION = boto3.Session(
+    aws_access_key_id=ACCESS['Access key ID'][0],
+    aws_secret_access_key=ACCESS['Secret access key'][0],
+)
+S3 = SESSION.resource('s3')
+BUCKET_NAME = 'national-snow-model'
+BUCKET = S3.Bucket(BUCKET_NAME)
 
 
 #plot time series of regionally average obs and preds
@@ -696,3 +711,79 @@ def slurmNSE(df, slurm_class):
         regionsNSE.sort()
         
     return np.array(regionsNSE)
+
+def getSNODAS_AWS(modelname):
+    file = 'SNODAS/SNODAS_WY2018.pkl'
+    filename = f"{HOME}/SWEML/Model/{modelname}/Predictions/Hold_Out_Year/{file}"
+    S3.meta.client.download_file(BUCKET_NAME, file, filename)
+
+def SNODASslurmNSE(EvalDF, SNODAS, slurm_class):
+    regionsNSE = []
+    for region in slurm_class:
+        sites = EvalDF[region].index.unique()
+
+        #Get evaluataion sites in SNODAS
+        SNODAS['region'] = SNODAS[region].T[sites].T
+
+        NSE = []
+        cols = ['Date', 'y_test']
+        for site in np.arange(0,len(sites),1):
+            #transform SNODAS df, process each site, process each Eval sit3
+            SNODASsite = pd.DataFrame(SNODAS[region].loc[sites[site]])
+            SNODASsite.reset_index(inplace = True)
+            SNODASsite.rename(columns = {sites[site]: 'y_pred', 'index':'Date'}, inplace = True)
+            SNODASsite.set_index('Date', inplace=True)
+
+            Evalsite = EvalDF[region].loc[sites[site]][cols]
+            Evalsite.set_index('Date', inplace = True)
+
+            #Merge SNODAS and Eval df site
+            Evalsite = pd.concat([Evalsite, SNODASsite], axis=1).dropna()
+
+            #0's are causing issues
+            Evalsite['y_pred'][Evalsite['y_pred']<0.1]=0.1
+            Evalsite['y_test'][Evalsite['y_test']<0.1]=0.1
+
+            #convert snodas from m to cm
+            Evalsite['y_pred'] = Evalsite['y_pred']*100
+
+            sitense = he.nse(Evalsite['y_pred'].values,Evalsite['y_test'].values)
+            NSE.append(sitense)
+            #change values less than 0 to 0
+            NSE = [0 if b < 0 else b for b in NSE]
+        regionsNSE = regionsNSE + NSE
+        regionsNSE.sort()
+        
+    return np.array(regionsNSE)
+
+def regionCDF(MaritimeNSE, PrarieeNSE, AlpineNSE, SNODAS_MaritimeNSE, SNODAS_PrarieeNSE, SNODAS_AlpineNSE, SNODAS, plt_save):
+    # calculate the proportional values of samples
+    Mp = 1. * np.arange(len(MaritimeNSE)) / (len(MaritimeNSE) - 1)
+    Pp = 1. * np.arange(len(PrarieeNSE)) / (len(PrarieeNSE) - 1)
+    Ap = 1. * np.arange(len(AlpineNSE)) / (len(AlpineNSE) - 1)
+
+    SMp = 1. * np.arange(len(SNODAS_MaritimeNSE)) / (len(SNODAS_MaritimeNSE) - 1)
+    SPp = 1. * np.arange(len(SNODAS_PrarieeNSE)) / (len(SNODAS_PrarieeNSE) - 1)
+    SAp = 1. * np.arange(len(SNODAS_AlpineNSE)) / (len(SNODAS_AlpineNSE) - 1)
+
+    # plot the sorted data:
+    fig = plt.figure(figsize=(10,5))
+    ax2 = fig.add_subplot(122)
+    #SWEML
+    ax2.plot(MaritimeNSE, Mp, color = 'royalblue', label = 'Maritime')
+    ax2.plot(PrarieeNSE, Pp, color = 'red', label = 'Prairie')
+    ax2.plot(AlpineNSE, Ap, color = 'forestgreen', label = 'Alpine')
+
+    if SNODAS == True:
+    #SNODAS
+        ax2.plot(SNODAS_MaritimeNSE, SMp, color = 'royalblue', label = 'SNODAS Maritime', linestyle ='--')
+        ax2.plot(SNODAS_PrarieeNSE, SPp, color = 'red', label = 'SNODAS Prairie', linestyle ='--')
+        ax2.plot(SNODAS_AlpineNSE, SAp, color = 'forestgreen', label = 'SNODAS Alpine', linestyle ='--')
+
+
+    ax2.set_xlabel('$NSE$')
+    ax2.set_ylabel('$p$')
+    ax2.legend()
+    if plt_save == True:
+        plt.savefig(f"Predictions/Hold_Out_Year/Paper_Figures/CDF.png", dpi =600, bbox_inches='tight')
+    plt.show()
