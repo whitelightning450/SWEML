@@ -70,7 +70,7 @@ BUCKET = S3.Bucket(BUCKET_NAME)
 
 class NSM_SCA(SWE_Prediction):
 
-    def __init__(self, date: Union[str, datetime], delta=7, timeDelay=3, threshold=0.2, Regions = ['N_Sierras'], modelname = 'Neural_Network'):
+    def __init__(self, date: Union[str, datetime], delta=7, timeDelay=3, threshold=0.2, Regions = ['N_Sierras'], modelname = 'Neural_Network', frequency = 'Weekly'):
         """
             Initializes the NSM_SCA class by calling the superclass constructor.
 
@@ -107,6 +107,7 @@ class NSM_SCA(SWE_Prediction):
         self.SCA_folder = f"{HOME}/SWEML/data/VIIRS/{self.folder}/"
         self.threshold = threshold * 100  # Convert percentage to values used in VIIRS NDSI
         self.modelname = modelname
+        self.frequency = frequency
 
 
 
@@ -190,7 +191,7 @@ class NSM_SCA(SWE_Prediction):
         try:
             self.Forecast  # Check if forecast dataframe has been initialized
         except AttributeError:
-            path = f"./Predictions/Hold_Out_Year/Prediction_DF_{self.date}.pkl" #This may need to be the region
+            path = f"./Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_{self.date}.pkl" #This may need to be the region
             self.Forecast = pd.read_pickle(path)
 
         region_df = self.Forecast[region]
@@ -216,14 +217,14 @@ class NSM_SCA(SWE_Prediction):
             Augments the forecast dataframes with SCA data.
         """
         print("Calculating mean SCA for each geometry in each region...")
-        self.Forecast = pd.read_pickle(f"./Predictions/Hold_Out_Year/Prediction_DF_{self.date}.pkl")
+        self.Forecast = pd.read_pickle(f"./Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_{self.date}.pkl")
 
         # Augment each Forecast dataframes
         for region in tqdm(self.Region_list):
             self.Forecast[region] = self.augment_SCA(region).drop(columns=["geometry"])
 
         # Save augmented forecast dataframes
-        path = f"./Predictions/Hold_Out_Year/Prediction_DF_SCA_{self.date}.pkl"
+        path = f"./Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_SCA_{self.date}.pkl"
         file = open(path, "wb")
 
         # write the python object (dict) to pickle file
@@ -235,7 +236,7 @@ class NSM_SCA(SWE_Prediction):
     def SWE_Predict(self, SCA=True, NewSim = True, modelname = 'Neural_Network'):
         # load first SWE observation forecasting dataset with prev and delta swe for observations.
         self.modelname = modelname
-        path = f"./Predictions/Hold_Out_Year/Prediction_DF_SCA_{self.date}.pkl"
+        path = f"./Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_SCA_{self.date}.pkl"
 
         if NewSim == False:
          
@@ -244,7 +245,7 @@ class NSM_SCA(SWE_Prediction):
             fdate = fdate.strftime("%Y-%m-%d")
 
             try:
-                futurepath = f"./Predictions/Hold_Out_Year/Prediction_DF_SCA_{fdate}.pkl"
+                futurepath = f"./Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_SCA_{fdate}.pkl"
                 # load regionalized forecast data
                 #current forecast
                 self.Forecast = open(path, "rb")
@@ -297,7 +298,7 @@ class NSM_SCA(SWE_Prediction):
                 
         if NewSim == True:
                 #save forecast into pkl file
-                futurepath = f"./Predictions/Hold_Out_Year/Prediction_DF_SCA_{self.date}.pkl"
+                futurepath = f"./Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_SCA_{self.date}.pkl"
                 file = open(futurepath, "wb")
                 pickle.dump(self.predictions, file)
                 file.close()
@@ -309,7 +310,7 @@ class NSM_SCA(SWE_Prediction):
         else:
             year = str(int(self.date[:4]))
                     
-        self.Prev_df.to_hdf(f"./Predictions/Hold_Out_Year/{year}_predictions.h5", key=self.date)
+        self.Prev_df.to_hdf(f"./Predictions/Hold_Out_Year/{self.frequency}/{year}_predictions.h5", key=self.date)
 
 
     def Predict(self, Region, SCA=True):
