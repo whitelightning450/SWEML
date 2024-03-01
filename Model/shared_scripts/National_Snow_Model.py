@@ -547,6 +547,7 @@ class SWE_Prediction():
             date = date.strftime('%Y-%m-%d')
 
             self.SWE_df = self.SWE_df[~self.SWE_df.index.duplicated(keep='first')]
+            self.SWE_df[date] = self.SWE_df[date].astype('float', errors='ignore')
             
             #fix na sites with regional average
             CDECsites = self.SWE_df.loc['CDEC:ADM':'CDEC:WWC']
