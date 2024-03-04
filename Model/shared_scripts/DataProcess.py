@@ -46,32 +46,10 @@ BUCKET = S3.Bucket(BUCKET_NAME)
 
 # Create .py function to process data to train model. 
 
-def DataProcess(test_year, modelname, Region_list):
-    #regions are N_Sierra, S_Sierra_Low, S_Sierra_High
+def DataProcess(test_year, frequency, modelname, Region_list):
 
-    #store and load region list
-    #Region_list = ['N_Sierras', 'S_Sierras_Low', 'S_Sierras_High']
-    #content_object = s3.Object(BUCKET_name, 'data/Regions.txt')
-    #file_content = content_object.get()['Body'].read().decode('utf-8')
-    #Region_list = json.loads(file_content)
-    
-
-    #set data path
-    #training_path = f"{datapath}/data"
-    #RegionTrain = {}
     print('Processing training dataframes for each region')
-    #for region in tqdm(Region_list):   
-        #load the RegionTrain DF, select the key grid cell colums, and add to training DF.
-     #   RegionTrain[region] = pd.read_hdf(f"{training_path}/RegionTrain_SCA.h5", region)
-    #RegionTrain= pickle.load(open(f"{training_path}/RegionTrain_SCA.pkl", "rb"))
 
-    #load RFE optimized features
-    #Region_optfeatures= pickle.load(open(f"{training_path}/Optimal_Features.pkl", "rb"))
-    #Load Training Data
-    #file_key = 'data/RegionTrain_SCA.pkl'
-    #obj = BUCKET.Object(file_key)
-    #body = obj.get()['Body']
-    #RegionTrain = pd.read_pickle(body)
     RegionTrain = {}
     for Region in Region_list:
         try:
@@ -157,7 +135,7 @@ def DataProcess(test_year, modelname, Region_list):
         RegionTest_notScaled[Region] = X_test_notscaled
         RegionObs_Train[Region] = pd.DataFrame(y_train, columns = ['SWE'])
         RegionObs_Test[Region] = pd.DataFrame(y_test, columns = ['SWE'])
-        RegionWYTest.to_hdf("./Predictions/Hold_Out_Year/RegionWYTest.h5", Region)
+        RegionWYTest.to_hdf(f"./Predictions/Hold_Out_Year/{frequency}/RegionWYTest.h5", Region)
         SWEmax = np.array(SWEmax)
         print(f"Model/{Region}/{Region}_SWEmax.npy")
         np.save(f"Model/{Region}/{Region}_SWEmax.npy" , SWEmax)
