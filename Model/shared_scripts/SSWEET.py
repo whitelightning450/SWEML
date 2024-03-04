@@ -145,47 +145,8 @@ def parityplot(RegionTest):
                                         'KGE_fSCA', 
                                         'PBias_fSCA',
                                        ])
-        Performance = Performance.append(error, ignore_index = True)
+        Performance = pd.concat([Performance, error], ignore_index = True)
       
-
-    #All Sierras
-    #y_test = Compare_DF['y_test']
-    #y_pred = Compare_DF['y_pred']
-    #y_pred_fSCA = Compare_DF['y_pred_fSCA']
-    #r2 = sklearn.metrics.r2_score(y_test, y_pred)
-    #rmse = sklearn.metrics.mean_squared_error(y_test, y_pred, squared = False) 
-    #kge, r, alpha, beta = he.evaluator(he.kge, y_pred, y_test)
-    #pbias = he.evaluator(he.pbias, y_pred, y_test)
-    
-    #r2_fSCA = sklearn.metrics.r2_score(y_test, y_pred_fSCA)
-    #rmse_fSCA = sklearn.metrics.mean_squared_error(y_test, y_pred_fSCA, squared = False)
-    #kge_fSCA, r_fSCA, alpha_fSCA, beta_fSCA = he.evaluator(he.kge, y_pred_fSCA, y_test)
-    #pbias_fSCA = he.evaluator(he.pbias, y_pred_fSCA, y_test)
-    
-    
-    #error_data = np.array(['Sierras_All',
- #                           round(r2,2),  
-   #                            round(rmse,2), 
-    #                           round(kge[0],2),
-     #                          round(pbias[0],2),
-      #                         round(r2_fSCA,2),
-       #                        round(rmse_fSCA,2),
-        #                      round(kge_fSCA[0],2),
-         #                     round(pbias_fSCA[0],2)])
-
-    #error = pd.DataFrame(data = error_data.reshape(-1, len(error_data)), 
-     #                        columns = ['Region', 
-      #                                  'R2',
-       #                                 'RMSE',
-        #                                'KGE', 
-         #                               'PBias', 
-          #                              'R2_fSCA',
-           #                             'RMSE_fSCA',
-            #                            'KGE_fSCA', 
-             #                           'PBias_fSCA'
-              #                         ])
-    #Performance = Performance.append(error, ignore_index = True)
-#    display(Performance)
     return Performance
     
     

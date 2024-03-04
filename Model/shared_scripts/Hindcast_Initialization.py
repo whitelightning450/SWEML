@@ -46,7 +46,7 @@ def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list, fre
 
     PreProcessedpath = "PaperData/Data/PreProcessed/"
     HoldOutpath = f"PaperData/Data/Predictions/Hold_Out_Year/{frequency}"
-    
+
     #Grab existing files based on water year
     prev_year = '2022'
     prev_date = prev_year + '-09-24'
@@ -61,24 +61,43 @@ def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list, fre
     #Make a submission DF
     try:
         old_preds = pd.read_csv(f"{datapath}/data/PreProcessed/submission_format_2022-09-24.parquet")
+        missingDF = pd.read_csv(f"{datapath}/data/PreProcessed/submission_format_missing_sites.parquet")
     except:
         #Make a submission DF
         key = f"{PreProcessedpath}submission_format_2022-09-24.parquet"
         obj = BUCKET.Object(key)
         body = obj.get()['Body']
         old_preds = pd.read_csv(body)
-    
+
+        #add missing locations
+        key = f"{PreProcessedpath}submission_format_missing_sites.parquet"
+        obj = BUCKET.Object(key)
+        body = obj.get()['Body']
+        missingDF = pd.read_csv(body)
+
+    old_preds = pd.concat([old_preds, missingDF])
+
+
     old_preds['2022-10-01'] = 0
-    new_preds_date = new_year+'-10-02'
-    old_preds.rename(columns = {'2022-10-02':new_preds_date}, inplace = True)
+    if frequency =='Daily':
+        new_preds_date = new_year+'-10-01'
+    if frequency =='Weeky':
+        new_preds_date = new_year+'-10-02'
+
+    old_preds.rename(columns = {'2022-10-01':new_preds_date}, inplace = True)  
     old_preds.set_index('cell_id', inplace = True)
+
+
     old_preds.to_hdf(f"{cwd}/Predictions/Hold_Out_Year/{frequency}/submission_format.h5", key =f"{new_date}")
-    
-    
+
+
     #define start and end date for list of dates
-    start_dt = date(int(new_year), 10, 2)
+    if frequency == 'Daily':
+        start_dt = date(int(new_year), 10, 1)
+    if frequency == 'Weekly':
+        start_dt = date(int(new_year), 10, 2)
     end_dt = date(int(new_year)+1, 6, 26)
-    
+
     #create empty list to store dates
     datelist = []
 
@@ -87,18 +106,39 @@ def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list, fre
         #print(dt.strftime("%Y-%m-%d"))
         dt=dt.strftime('%Y-%m-%d')
         datelist.append(dt)
-    
+
+    try:
+        regions = pd.read_pickle(f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl")
+    except:
+        key = f"data/PreProcessed/RegionVal.pkl"            
+        S3.meta.client.download_file(BUCKET_NAME, key,f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl")
+        regions = pd.read_pickle(f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl")
+
     #need to bring in a prediction folder template 2018-09-25
     key = f"data/Prediction_DF_SCA_2018-09-25.pkl"      
     path = f"Predictions/Hold_Out_Year/{frequency}/Prediction_DF_SCA_{start_dt-timedelta(day_delta)}.pkl"
     S3.meta.client.download_file(BUCKET_NAME, key,path)
     PSCA = open(path, "rb")
     PSCA = pd.read_pickle(PSCA)
+
+    #Need to add ASO regions not in 2019 data
+    SH = regions['S_Sierras'][regions['S_Sierras']['elevation_m'] > 2500]
+    SH.set_index('cell_id', inplace = True)
+
+    SL = regions['S_Sierras'][regions['S_Sierras']['elevation_m'] < 2500]
+    SL.set_index('cell_id', inplace = True)
+
+    PSCA['S_Sierras_High'] = pd.concat([PSCA['S_Sierras_High'], SH]).fillna(0)
+    PSCA['S_Sierras_Low'] = pd.concat([PSCA['S_Sierras_Low'], SL]).fillna(0)
+
+    #drop duplicate sites
+    PSCA['S_Sierras_High'].drop_duplicates(inplace = True)
+    PSCA['S_Sierras_Low'].drop_duplicates(inplace = True)
+
     for region in Region_list:
         PSCA[region].rename(columns ={'2018-09-25':str(pd.to_datetime(start_dt)-timedelta(day_delta))[:10]}, inplace = True)
     pickle.dump(PSCA, open(path, "wb"))
-        
-    
+
     try:
         obs_path = f"{HOME}/SWEML/data/PreProcessed/DA_ground_measures_features.h5"
         temp = pd.read_hdf(obs_path, key = str(pd.to_datetime(start_dt)-timedelta(day_delta))[:10])
@@ -109,20 +149,8 @@ def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list, fre
         temp = pd.read_hdf(obs_path, key = '2018-09-25')
         temp['Date'] = str(pd.to_datetime(start_dt)-timedelta(day_delta))[:10]
         temp.to_hdf(obs_path, key = str(pd.to_datetime(start_dt)-timedelta(day_delta))[:10])
-        
-    try:
-        regions = pd.read_pickle(f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl")
-    except:
-        key = f"data/PreProcessed/RegionVal.pkl"            
-        S3.meta.client.download_file(BUCKET_NAME, key,f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl")
-        regions = pd.read_pickle(f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl")
-        
-    
-        
-     #makes sure all prediction locations for testing are included in the simulation   
-    #addPredictionLocations(Region_list, datapath, cwd, datelist[0])
-    
-    print('New simulation start files complete')
+
+        print('New simulation start files complete')
     return datelist
     
 
@@ -151,25 +179,34 @@ def HindCast_DataProcess(datelist,Region_list, cwd, datapath, model, frequency):
         T = T[cols]
         Test = pd.concat([Test, T])
 
+    
+    #update datelist with Test obs
+    if frequency == 'Daily':
+        datelist = list(set(Test['Date'].astype(str)))
+        datelist.sort()
+
         #Load predictions into a DF
     preds = pd.DataFrame()
     prev_SWE = pd.DataFrame()
     pred_sites = pd.DataFrame()
     TestsiteData = pd.DataFrame()
     TestsiteDataPSWE = pd.DataFrame()
+    missing_sites = []
+    missing_dates = []
     print('Getting prediction files')
     for date in datelist:
+
         try:
             preds[date] = pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/{frequency}/2019_predictions.h5", key = date)
         except:
             print('No prediction file found, retrieving from AWS')
-            S3.meta.client.download_file(BUCKET_NAME, f"{model}/Hold_Out_Year/2019_predictions.h5",f"{cwd}/Predictions/Hold_Out_Year/{frequency}/2019_predictions.h5")
+            S3.meta.client.download_file(BUCKET_NAME, f"{model}/Hold_Out_Year/{frequency}/2019_predictions.h5",f"{cwd}/Predictions/Hold_Out_Year/{frequency}/2019_predictions.h5")
             preds[date] = pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/{frequency}/2019_predictions.h5", key = date)
             print('File loaded, proceeding...')
         
         #get previous SWE predictions for DF
         startdate = str(datetime.strptime(date, '%Y-%m-%d').date() -timedelta(day_delta))
-        if startdate < f"{startdate[:4]}-10-01":
+        if startdate < f"{startdate[:4]}-10-02":
             prev_SWE[startdate] = preds[date]
             prev_SWE[startdate] = 0
             
@@ -191,48 +228,61 @@ def HindCast_DataProcess(datelist,Region_list, cwd, datapath, model, frequency):
         TestsiteDataPSWE = pd.concat([TestsiteDataPSWE, prev_Tdata])
         
         sites = Test[Test['Date'] == date].index
-        #print(date, len(sites))
-        #print(sites)
-        
+
         for site in sites:
             #predictions
-            s = pd.DataFrame(preds.loc[site].copy()).T
-            s['Date'] = date
-            s.rename(columns = {date:'y_pred'}, inplace = True)
-            cols =['Date', 'y_pred']
-            s = s[cols]
+            try:
+                s = pd.DataFrame(preds.loc[site].copy()).T
+                s['Date'] = date
+                s.rename(columns = {date:'y_pred'}, inplace = True)
+                cols =['Date', 'y_pred']
+                s = s[cols]
+                pred_sites = pd.concat([pred_sites, s])
+            
+            except:
+                missing_sites.append(site)
+                missing_dates.append(date)
+     
+               
             
             #previous SWE
-            pSWE = pd.DataFrame(preds.loc[site].copy()).T
-            pSWE['Date'] = date
-            pSWE.rename(columns = {startdate:'prev_SWE'}, inplace = True)
-            cols =['Date', 'prev_SWE']
-            pSWE = pSWE[cols]
+#             pSWE = pd.DataFrame(preds.loc[site].copy()).T
+#             pSWE['Date'] = date
+#             pSWE.rename(columns = {startdate:'prev_SWE'}, inplace = True)
+#             cols =['Date', 'prev_SWE']
+#             pSWE = pSWE[cols]
             
-            #print(s)
-            s['prev_SWE'] = pSWE['prev_SWE']
-            pred_sites = pd.concat([pred_sites, s])
+#             #print(s)
+#             s['prev_SWE'] = pSWE['prev_SWE']
+             #pred_sites = pd.concat([pred_sites, s])
 
     print('Site data processing complete, setting up prediction dataframes...')  
     pswecols = ['Date', 'y_test']
-    TestsiteDataPSWE = TestsiteDataPSWE[pswecols]
-    TestsiteDataPSWE.rename(columns = {'y_test':'y_test_prev'}, inplace = True)
-    #display(TestsiteDataPSWE)       
+    # TestsiteDataPSWE = TestsiteDataPSWE[pswecols]
+    # TestsiteDataPSWE.rename(columns = {'y_test':'y_test_prev'}, inplace = True)
+    # display(TestsiteDataPSWE)       
     
     #get predictions for obs locations
-    cols = ['Date','y_test', 'y_test_prev', 'y_pred','prev_SWE','Long', 'Lat', 'elevation_m', 'WYWeek', 'northness', 'VIIRS_SCA', 'hasSnow', 'Region']
-    #display(TestsiteData)
-    TestsiteData = pd.concat([TestsiteData, pred_sites], axis =1)
+    #cols = ['Date','y_test', 'y_test_prev', 'y_pred','prev_SWE','Long', 'Lat', 'elevation_m', 'WYWeek', 'northness', 'VIIRS_SCA', 'hasSnow', 'Region']
+    cols = ['Date','y_test', 'y_pred','Long', 'Lat', 'elevation_m', 'WYWeek', 'northness', 'VIIRS_SCA', 'hasSnow', 'Region']
+    TestsiteData['Date'] = TestsiteData['Date'].astype('str')
+    
+    pred_sites.reset_index(inplace = True)
+    TestsiteData.reset_index(inplace = True)
+    TestsiteData =TestsiteData.merge(pred_sites, on=['index', 'Date'])
+    TestsiteData.set_index('index', inplace = True)
+
+#     TestsiteData = pd.concat([TestsiteData, pred_sites], axis =1)
     
     TestsiteData = TestsiteData.loc[:,~TestsiteData.columns.duplicated()].copy()
-    TestsiteDataPSWE.reset_index(inplace = True)
-    TestsiteData.reset_index(inplace = True)
-    TestsiteData['Date'] = TestsiteData['Date'].dt.strftime('%Y-%m-%d')
-    TestsiteData = pd.merge(TestsiteData, TestsiteDataPSWE,  how='left', left_on=['index','Date'], right_on = ['index','Date'])
-    TestsiteData.set_index('index', inplace = True)
+    # TestsiteDataPSWE.reset_index(inplace = True)
+    #TestsiteData.reset_index(inplace = True)
+    #TestsiteData['Date'] = TestsiteData['Date'].dt.strftime('%Y-%m-%d')
+    # TestsiteData = pd.merge(TestsiteData, TestsiteDataPSWE,  how='left', left_on=['index','Date'], right_on = ['index','Date'])
+    #TestsiteData.set_index('index', inplace = True)
     TestsiteData.fillna(0, inplace = True)
     TestsiteData = TestsiteData[cols]
-    TestsiteData['prev_SWE_error'] = TestsiteData['y_test_prev'] - TestsiteData['prev_SWE']
+    # TestsiteData['prev_SWE_error'] = TestsiteData['y_test_prev'] - TestsiteData['prev_SWE']
     #Set up dictionary to match the training data
     EvalTest = {}
     print('Finalizing Evaluation dataframes...')
@@ -241,10 +291,11 @@ def HindCast_DataProcess(datelist,Region_list, cwd, datapath, model, frequency):
         EvalTest[Region]['y_pred'] = EvalTest[Region]['y_pred']*2.54
         EvalTest[Region]['y_pred_fSCA'] = EvalTest[Region]['y_pred']
         EvalTest[Region]['y_test'] = EvalTest[Region]['y_test']*2.54
-        EvalTest[Region]['y_test_prev'] = EvalTest[Region]['y_test_prev']*2.54
-        EvalTest[Region]['prev_SWE'] = EvalTest[Region]['prev_SWE']*2.54
-        
-    return  EvalTest
+        # EvalTest[Region]['y_test_prev'] = EvalTest[Region]['y_test_prev']*2.54
+        # EvalTest[Region]['prev_SWE'] = EvalTest[Region]['prev_SWE']*2.54
+
+    print('There were ', len(missing_sites), ' sites missing from the prediction dataset occuring on ', list(set(missing_dates)))
+    return  EvalTest, missing_sites
         
 
 #function to add prediction locations in training dataset but not in the submission format file        

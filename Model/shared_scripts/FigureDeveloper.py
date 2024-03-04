@@ -175,7 +175,7 @@ def Dict_2_DF(EvalDF, Region_list):
         elif region == 'Or_Coast':
             EvalDF[region]['Region'] = 'Oregon Coast Range'
 
-        Model_Results = Model_Results.append(EvalDF[region])
+        Model_Results = pd.concat([Model_Results, EvalDF[region]])
         
     Model_Results['error'] = Model_Results['y_test']-Model_Results['y_pred']
     
@@ -217,7 +217,7 @@ def Sturm_Classified_Performance(Model_Results):
 
 
 # Figure 3, predicted vs observed for Southern Sierra Nevada, Upper Colorado Rockiesk All regions (subsetted into maritime ,apine, prarie)
-def Slurm_Class_parity(Model_Results, Maritime_Region, Prairie_Region, Alpine_Region):
+def Slurm_Class_parity(Model_Results, Maritime_Region, Prairie_Region, Alpine_Region, frequency):
 
     Model_Results1 = Model_Results[Model_Results['Region'].isin(Maritime_Region)]
     Model_Results2 = Model_Results[Model_Results['Region'].isin(Prairie_Region)]
@@ -239,13 +239,13 @@ def Slurm_Class_parity(Model_Results, Maritime_Region, Prairie_Region, Alpine_Re
     #all grouping
     groups_maritime = Model_Results1.groupby('Region')
     for name, group in groups_maritime:
-        ax1.plot( group['y_test'],group['y_pred'], marker = 'o', linestyle = ' ', markersize = 2, color='royalblue', label = name, alpha =.2)
+        ax1.plot( group['y_test'].values,group['y_pred'].values, marker = 'o', linestyle = ' ', markersize = 2, color='royalblue', label = name, alpha =.2)
     groups_alpine = Model_Results3.groupby('Region')
     for name, group in groups_alpine:
-        ax1.plot( group['y_test'],group['y_pred'], marker = 'o', linestyle = ' ', markersize = 2, color='forestgreen', label = name, alpha =.4)
+        ax1.plot( group['y_test'].values,group['y_pred'].values, marker = 'o', linestyle = ' ', markersize = 2, color='forestgreen', label = name, alpha =.4)
     groups_prairie = Model_Results2.groupby('Region')
     for name, group in groups_prairie:
-        ax1.plot( group['y_test'],group['y_pred'], marker = 'o', linestyle = ' ', markersize = 2, color='red', label = name, alpha =.2)  
+        ax1.plot( group['y_test'].values,group['y_pred'].values, marker = 'o', linestyle = ' ', markersize = 2, color='red', label = name, alpha =.2)  
 
     # groups = Model_Results1.groupby('Region')
     # for name, group in groups:
@@ -270,7 +270,7 @@ def Slurm_Class_parity(Model_Results, Maritime_Region, Prairie_Region, Alpine_Re
     #Sierra Nevada grouping
     groups = Model_Results.loc[(Model_Results["Region"]=="Southern Sierra Nevada High") | (Model_Results["Region"]=="Southern Sierra Nevada Low")].groupby('Region')
     for name, group in groups:
-        ax2.plot( group['y_test'],group['y_pred'], marker = 'o', linestyle = ' ', markersize = 2, color='grey', label = name, alpha = .4)
+        ax2.plot( group['y_test'].values,group['y_pred'].values, marker = 'o', linestyle = ' ', markersize = 2, color='grey', label = name, alpha = .4)
 
     # ax2.legend(title ='Snow Classification: Prairie', fontsize=font, title_fontsize=tittle_font, ncol = 1, bbox_to_anchor=(1, 1), markerscale = 2)
     ax2.plot([0,Model_Results['y_test'].max()], [0,Model_Results['y_test'].max()], color = 'red', linestyle = '--')
@@ -288,7 +288,7 @@ def Slurm_Class_parity(Model_Results, Maritime_Region, Prairie_Region, Alpine_Re
     #Colorado Rockies Grouping
     groups = Model_Results.loc[(Model_Results["Region"]=="Upper Colorado Rockies")].groupby('Region')
     for name, group in groups:
-        ax3.plot( group['y_test'],group['y_pred'], marker = 'o', linestyle = ' ', markersize = 2, color='grey', label = name,alpha = .4)
+        ax3.plot( group['y_test'].values,group['y_pred'].values, marker = 'o', linestyle = ' ', markersize = 2, color='grey', label = name,alpha = .4)
 
     # ax3.legend(title ='Snow Classification: Alpine', fontsize=font, title_fontsize=tittle_font, ncol = 1, bbox_to_anchor=(1., 1.), markerscale = 2)
     ax3.plot([0,Model_Results['y_test'].max()], [0,Model_Results['y_test'].max()], color = 'red', linestyle = '--')
@@ -301,12 +301,12 @@ def Slurm_Class_parity(Model_Results, Maritime_Region, Prairie_Region, Alpine_Re
     ax3.tick_params(axis='y', which='major', pad=1)
 
     #save figure
-    plt.savefig('./Predictions/Hold_Out_Year/Paper_Figures/Parity_Plot_All4.png', dpi =600, bbox_inches='tight')
-    plt.savefig('./Predictions/Hold_Out_Year/Paper_Figures/Parity_Plot_All4.pdf', dpi =600, bbox_inches='tight')
+    plt.savefig(f"Predictions/Hold_Out_Year/{frequency}/Paper_Figures/Parity_Plot_All4.png", dpi =600, bbox_inches='tight')
+    plt.savefig(f"Predictions/Hold_Out_Year/{frequency}/Paper_Figures/Parity_Plot_All4.pdf", dpi =600, bbox_inches='tight')
     
     
 #Evaluate by Elevation cleaned up
-def EvalPlots3(Model_Results, Maritime_Region, Prairie_Region, Alpine_Region, x, y, xlabel, ylabel, plotname, mark_size):
+def EvalPlots3(Model_Results, Maritime_Region, Prairie_Region, Alpine_Region, x, y, xlabel, ylabel, plotname, mark_size, frequency):
     # fig, (ax1, ax2,ax3) = plt.subplots(2, 1, 2, figsize=(3,9))
     
     Model_Results1 = Model_Results[Model_Results['Region'].isin(Maritime_Region)]
@@ -328,13 +328,13 @@ def EvalPlots3(Model_Results, Maritime_Region, Prairie_Region, Alpine_Region, x,
     #all grouping
     groups_maritime = Model_Results1.groupby('Region')
     for name, group in groups_maritime:
-        ax1.plot( group[x],group[y], marker = 'o', linestyle = ' ', markersize = mark_size, color='royalblue', label = name, alpha =.2)
+        ax1.plot( group[x].values,group[y].values, marker = 'o', linestyle = ' ', markersize = mark_size, color='royalblue', label = name, alpha =.2)
     groups_alpine = Model_Results3.groupby('Region')
     for name, group in groups_alpine:
-        ax1.plot( group[x],group[y], marker = 'o', linestyle = ' ', markersize = mark_size, color='forestgreen', label = name, alpha =.4)
+        ax1.plot( group[x].values,group[y].values, marker = 'o', linestyle = ' ', markersize = mark_size, color='forestgreen', label = name, alpha =.4)
     groups_prairie = Model_Results2.groupby('Region')
     for name, group in groups_prairie:
-        ax1.plot( group[x],group[y], marker = 'o', linestyle = ' ', markersize = mark_size, color='red', label = name, alpha =.2)  
+        ax1.plot( group[x].values,group[y].values, marker = 'o', linestyle = ' ', markersize = mark_size, color='red', label = name, alpha =.2)  
     
     xmin = min(Model_Results[x])
     xmax = max(Model_Results[x])
@@ -355,7 +355,7 @@ def EvalPlots3(Model_Results, Maritime_Region, Prairie_Region, Alpine_Region, x,
     #Sierra Nevada grouping
     groups = Model_Results.loc[(Model_Results["Region"]=="Southern Sierra Nevada High") | (Model_Results["Region"]=="Southern Sierra Nevada Low")].groupby('Region')
     for name, group in groups:
-        ax2.plot( group[x],group[y], marker = 'o', linestyle = ' ', markersize = mark_size, color='grey', label = name, alpha = .4)
+        ax2.plot( group[x].values,group[y].values, marker = 'o', linestyle = ' ', markersize = mark_size, color='grey', label = name, alpha = .4)
     xmin = min(Model_Results[x])
     xmax = max(Model_Results[x])
     # ax2.legend(title ='Snow Classification: Prairie', fontsize=font, title_fontsize=tittle_font, ncol = 1, bbox_to_anchor=(1, 1), markerscale = 2)
@@ -370,7 +370,7 @@ def EvalPlots3(Model_Results, Maritime_Region, Prairie_Region, Alpine_Region, x,
     #Colorado Rockies Grouping
     groups = Model_Results.loc[(Model_Results["Region"]=="Upper Colorado Rockies")].groupby('Region')
     for name, group in groups:
-        ax3.plot( group[x],group[y], marker = 'o', linestyle = ' ', markersize = mark_size, color='grey', label = name, alpha = .4)
+        ax3.plot( group[x].values,group[y].values, marker = 'o', linestyle = ' ', markersize = mark_size, color='grey', label = name, alpha = .4)
     xmin = min(Model_Results[x])
     xmax = max(Model_Results[x])
     # ax3.legend(title ='Snow Classification: Alpine', fontsize=font, title_fontsize=tittle_font, ncol = 1, bbox_to_anchor=(1., 1.), markerscale = 2)
@@ -384,8 +384,8 @@ def EvalPlots3(Model_Results, Maritime_Region, Prairie_Region, Alpine_Region, x,
 
 
     # save figure
-    plt.savefig(f"./Predictions/Hold_Out_Year/Paper_Figures/{plotname}3.png", dpi =600, bbox_inches='tight')
-    plt.savefig(f"./Predictions/Hold_Out_Year/Paper_Figures/{plotname}3.pdf", dpi =600, bbox_inches='tight')
+    plt.savefig(f"Predictions/Hold_Out_Year/{frequency}/Paper_Figures/{plotname}3.png", dpi =600, bbox_inches='tight')
+    plt.savefig(f"Predictions/Hold_Out_Year/{frequency}/Paper_Figures/{plotname}3.pdf", dpi =600, bbox_inches='tight')
     
     
     
@@ -496,7 +496,7 @@ def SWE_TS_plot(datelist, df, regions, plotname):
     
     
 #plot time series of regionally average obs and preds
-def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fontsize, opacity):
+def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fontsize, opacity, frequency):
     
     RegionAll = regions1+regions2+regions3
 
@@ -513,7 +513,8 @@ def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fo
 
         RegionDF.index = pd.to_datetime(RegionDF.index)
         #RegionDF = RegionDF.resample('D').mean().dropna()
-        RegionDF = RegionDF.resample('D', base=0).agg(['min','max','mean']).round(1).dropna()
+        RegionDF = RegionDF.resample('D').agg(['min','max','mean']).round(1).dropna()
+        
         if region == 'N_Sierras':
             name = 'Northern Sierra Nevada'
         elif region == 'S_Sierras_High':
@@ -576,23 +577,23 @@ def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fo
         key = keys[i]
         RegionDF = RegionDict[key]
         
-        ax[i].plot(RegionDF.index, RegionDF['y_test']['mean'], color = 'black')
-        ax[i].fill_between(RegionDF.index,RegionDF['y_test']['mean'],RegionDF['y_test']['min'],interpolate=True,color='black', alpha=opacity)
-        ax[i].fill_between(RegionDF.index,RegionDF['y_test']['mean'],RegionDF['y_test']['max'],interpolate=True,color='black', alpha=opacity)
+        ax[i].plot(RegionDF.index.values, RegionDF['y_test']['mean'].values, color = 'black')
+        ax[i].fill_between(RegionDF.index.values,RegionDF['y_test']['mean'].values,RegionDF['y_test']['min'].values,interpolate=True,color='black', alpha=opacity)
+        ax[i].fill_between(RegionDF.index.values,RegionDF['y_test']['mean'].values,RegionDF['y_test']['max'].values,interpolate=True,color='black', alpha=opacity)
         ax[i].tick_params(axis='y', labelsize=fontsize)
         
         if i<4:
-            ax[i].plot(RegionDF.index, RegionDF['y_pred']['mean'],  color = 'royalblue')
-            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['min'],interpolate=True,color='darkblue', alpha=opacity*2)
-            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['max'],interpolate=True,color='darkblue', alpha=opacity*2)
+            ax[i].plot(RegionDF.index.values, RegionDF['y_pred']['mean'].values,  color = 'royalblue')
+            ax[i].fill_between(RegionDF.index.values,RegionDF['y_pred']['mean'].values,RegionDF['y_pred']['min'].values,interpolate=True,color='darkblue', alpha=opacity*2)
+            ax[i].fill_between(RegionDF.index.values,RegionDF['y_pred']['mean'].values,RegionDF['y_pred']['max'].values,interpolate=True,color='darkblue', alpha=opacity*2)
         if 4<=i<8:
-            ax[i].plot(RegionDF.index, RegionDF['y_pred']['mean'],  color = 'red')
-            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['min'],interpolate=True,color='red', alpha=opacity*2)
-            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['max'],interpolate=True,color='red', alpha=opacity*2)
+            ax[i].plot(RegionDF.index.values, RegionDF['y_pred']['mean'].values,  color = 'red')
+            ax[i].fill_between(RegionDF.index.values,RegionDF['y_pred']['mean'].values,RegionDF['y_pred']['min'].values,interpolate=True,color='red', alpha=opacity*2)
+            ax[i].fill_between(RegionDF.index.values,RegionDF['y_pred']['mean'].values,RegionDF['y_pred']['max'].values,interpolate=True,color='red', alpha=opacity*2)
         if i>=8:
-            ax[i].plot(RegionDF.index, RegionDF['y_pred']['mean'],  color = 'forestgreen')
-            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['min'],interpolate=True,color='forestgreen', alpha=opacity*2)
-            ax[i].fill_between(RegionDF.index,RegionDF['y_pred']['mean'],RegionDF['y_pred']['max'],interpolate=True,color='forestgreen', alpha=opacity*2)
+            ax[i].plot(RegionDF.index.values, RegionDF['y_pred']['mean'].values,  color = 'forestgreen')
+            ax[i].fill_between(RegionDF.index.values,RegionDF['y_pred']['mean'].values,RegionDF['y_pred']['min'].values,interpolate=True,color='forestgreen', alpha=opacity*2)
+            ax[i].fill_between(RegionDF.index.values,RegionDF['y_pred']['mean'].values,RegionDF['y_pred']['max'].values,interpolate=True,color='forestgreen', alpha=opacity*2)
         
         
         if i<10:
@@ -609,8 +610,8 @@ def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fo
 
             if i == 11:
                 ax[i].tick_params(axis='x', rotation=45, labelsize=fontsize)
-                ax[i].plot(RegionDF.index, RegionDF['y_test']['mean'], color = 'black')
-                ax[i].plot(RegionDF.index, RegionDF['y_pred']['mean'],  color = 'forestgreen')
+                ax[i].plot(RegionDF.index.values, RegionDF['y_test']['mean'].values, color = 'black')
+                ax[i].plot(RegionDF.index.values, RegionDF['y_pred']['mean'].values,  color = 'forestgreen')
 
       
         ax[i].set_title(key, fontsize = fontsize*1.2)
@@ -623,7 +624,7 @@ def SWE_TS_plot_classes(datelist, df, regions1, regions2, regions3, plotname, fo
     fig.text(0.06, 0.5, 'Snow Water Equivalent (cm)', ha='center', va='center', rotation='vertical', fontsize= fontsize*1.2)
     fig.text(0.5, 0.06, 'Datetime', ha='center', va='center', fontsize= fontsize*1.2)
     plt.legend( handles=[maritime,prairie, alpine, obs], loc = 'lower center', bbox_to_anchor = (0, 0, 1, 1),  bbox_transform = plt.gcf().transFigure, ncol = 2, fontsize = fontsize)
-    plt.savefig(f"./Predictions/Hold_Out_Year/Paper_Figures/{plotname}.png", dpi = 600, box_inches = 'tight')
+    plt.savefig(f"Predictions/Hold_Out_Year/{frequency}/Paper_Figures/{plotname}.png", dpi = 600, box_inches = 'tight')
     return RegionDict, RegionAll
     plt.show()
 
