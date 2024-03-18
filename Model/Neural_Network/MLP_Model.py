@@ -71,7 +71,7 @@ def natural_keys(text):
     return [ atof(c) for c in re.split(r'[+-]?([0-9]+(?:[.][0-9]*)?|[.][0-9]+)', text) ]
 
 
-def Model_train(epochs, RegionTrain, RegionTest, RegionObs_Train, RegionObs_Test, Region_list):
+def Model_train(epochs,batchsize, RegionTrain, RegionTest, RegionObs_Train, RegionObs_Test, Region_list, fSCA = False):
     
     
     #Get regions
@@ -84,11 +84,24 @@ def Model_train(epochs, RegionTrain, RegionTest, RegionObs_Train, RegionObs_Test
         X_test = RegionTest[Region].copy()
         y_train = RegionObs_Train[Region].copy()
         y_test = RegionObs_Test[Region].copy()
+        
+        X_train.pop('Date')
+        X_test.pop('Date')
 
         #remove Date, VIIRS_SCA, and hasSnow from training and testing df
-        colrem = ['Date', 'VIIRS_SCA', 'hasSnow']
-        X_train.drop(columns = colrem, axis =1, inplace = True)
-        X_test.drop(columns = colrem, axis =1, inplace = True)
+        if fSCA == False:
+            colrem = [ 'VIIRS_SCA', 'hasSnow']
+            X_train.drop(columns = colrem, axis =1, inplace = True)
+            X_test.drop(columns = colrem, axis =1, inplace = True)
+
+        if fSCA == True:
+            X_train['HasSnow'] = 0
+            X_train['HasSnow'][X_train['hasSnow']==True] = 1
+            X_train.pop('hasSnow')
+            
+            X_test['HasSnow'] = 0
+            X_test['HasSnow'][X_test['hasSnow']==True] = 1
+            X_test.pop('hasSnow')
 
         #set up prediction dataframe
         pred_obs = pd.DataFrame(y_test)
@@ -97,7 +110,9 @@ def Model_train(epochs, RegionTrain, RegionTest, RegionObs_Train, RegionObs_Test
 
         #set up model checkpoint to be able to extract best models, ok to save locaally
         checkpointfilename ='ASWE_{val_loss:.8f}.h5'
-        checkpoint_filepath = f"./Model/{Region}/"
+        checkpoint_filepath = f"./Model/{Region}/fSCA_{fSCA}/"
+        if not os.path.exists(checkpoint_filepath):
+            os.makedirs(checkpoint_filepath)
 
         checkpoint_filename = checkpoint_filepath+checkpointfilename
         
@@ -145,12 +160,12 @@ def Model_train(epochs, RegionTrain, RegionTest, RegionObs_Train, RegionObs_Test
 
         model = keras.Model(inputs=input_1,outputs=x)
         model.compile(loss='mse', optimizer=keras.optimizers.Adam(1e-4), metrics=['mse'])# google keras optimizers
-        print(model.summary())
+       # print(model.summary())
 
-        model.fit(X_train, y_train, epochs=epochs, batch_size=100,
+        model.fit(X_train, y_train, epochs=epochs, batch_size=batchsize,
                             validation_data=(X_test,y_test),shuffle=True,callbacks=[callback], verbose=0) #shuffle -> false, can you get repeatable model results this way?
 
-def Model_predict(RegionTest, RegionObs_Test, RegionTest_notScaled, Region_list):
+def Model_predict(RegionTest, RegionObs_Test, RegionTest_notScaled, Region_list, fSCA = False):
     
     
     Predictions = {}
@@ -175,33 +190,36 @@ def Model_predict(RegionTest, RegionObs_Test, RegionTest_notScaled, Region_list)
                 y_pred_VIIRS['y_pred_fSCA'][i] = 0  
 
         #drop VIIRS cols from prediction DF
-        X_test = X_test.drop(VIIRScols, axis = 1)
+        if fSCA == False:
+            X_test = X_test.drop(VIIRScols, axis = 1)
+        if fSCA == True:
+            X_test['HasSnow'] = 0
+            X_test['HasSnow'][X_test['hasSnow']==True] = 1
+            X_test.pop('Date')
+            X_test.pop('hasSnow')
 
         pred_obs = pd.DataFrame(RegionObs_Test[Region])
         pred_obs = pred_obs.rename(columns = {'SWE':'y_test'})
 
         #set up model checkpoint to be able to extract best models
-        checkpoint_filepath = f"./Model/{Region}/"
-
-        try:
-            model = keras.models.load_model(f"{checkpoint_filepath}{Region}_model.keras")
-        except:
+        #checkpoint_filepath = f"./Model/{Region}/"
+        checkpoint_filepath = f"./Model/{Region}/fSCA_{fSCA}/"
         #load the model with highest performance
-            bestmodel = [f for f in listdir(checkpoint_filepath) if isfile(join(checkpoint_filepath, f))]
-            bestmodel.sort(key=natural_keys)
-            bestmodel = checkpoint_filepath+bestmodel[0]
-            model=load_model(bestmodel)
-        # print(bestmodel)
-            #save this model
-            model.save(f"{checkpoint_filepath}{Region}_model.keras")
-            #make sure the model loads
-            model = keras.models.load_model(f"{checkpoint_filepath}{Region}_model.keras")
+        bestmodel = [f for f in listdir(checkpoint_filepath) if isfile(join(checkpoint_filepath, f))]
+        bestmodel.sort(key=natural_keys)
+        bestmodel = checkpoint_filepath+bestmodel[0]
+        model=load_model(bestmodel)
+    # print(bestmodel)
+        #save this model
+        model.save(f"{checkpoint_filepath}{Region}_model.keras")
+        #make sure the model loads
+        model = keras.models.load_model(f"{checkpoint_filepath}{Region}_model.keras")
 
 
          #Load SWEmax
         SWEmax = np.load(f"{checkpoint_filepath}/{Region}_SWEmax.npy")
         #make predictions and rescale, the 10 is bc changed -9999 values to -10
-        y_pred = (SWEmax* model.predict(X_test))
+        y_pred = (SWEmax* model.predict(X_test, verbose = 0))
 
         #negative SWE is impossible, change negative values to 0
         y_pred[y_pred < 0 ] = 0
@@ -263,7 +281,8 @@ def Prelim_Eval(Predictions):
 
         error = pd.DataFrame(data = error_data.reshape(-1, len(error_data)), 
                              columns = ['Region', 'R2', 'RMSE', 'R2_fSCA', 'RMSE_fSCA'])
-        Performance = Performance.append(error, ignore_index = True)
+        Performance = pd.concat([Performance, error])
+        
 
         #plot graph
         plt.scatter( pred_obs['y_test'],pred_obs['y_pred'], s=5, color="blue", label="Predictions")
