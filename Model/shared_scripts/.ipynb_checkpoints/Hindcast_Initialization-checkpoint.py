@@ -499,7 +499,7 @@ def Hindcast_to_AWS(modelname, folderpath, AWSpath, type):
         filepath = f"{folderpath}{file}"
         S3.meta.client.upload_file(Filename= filepath, Bucket=BUCKET_NAME, Key=f"{modelname}/{AWSpath}{file}")
 
-def AWS_to_Hindcast(modelname, frequency):
+def AWS_to_Hindcast(modelname, frequency, fSCA):
     #load access key
     
     files = []
@@ -510,6 +510,6 @@ def AWS_to_Hindcast(modelname, frequency):
     print('Downloading files from AWS to local')
     for file in tqdm(files):
         filename = file.replace(f"{modelname}/Hold_Out_Year/{frequency}/", '')
-        filename = f"{HOME}/SWEML/Model/{modelname}/Predictions/Hold_Out_Year/{frequency}/{filename}"
+        filename = f"{HOME}/SWEML/Model/{modelname}/Predictions/Hold_Out_Year/{frequency}/fSCA_{fSCA}/{filename}"
         #print(filename)
         S3.meta.client.download_file(BUCKET_NAME, file, filename)
