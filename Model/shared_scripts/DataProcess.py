@@ -46,7 +46,7 @@ BUCKET = S3.Bucket(BUCKET_NAME)
 
 # Create .py function to process data to train model. 
 
-def DataProcess(test_year, frequency, modelname, Region_list):
+def DataProcess(test_year, frequency, modelname, Region_list, fSCA = False):
 
     print('Processing training dataframes for each region')
 
@@ -63,7 +63,6 @@ def DataProcess(test_year, frequency, modelname, Region_list):
     obj = BUCKET.Object(file_key)
     body = obj.get()['Body']
     Region_optfeatures = pd.read_pickle(body)
- 
 
     #Split the data the same as original train/test split to make same figures/analysis
     VIIRS_cols = ['Date', 'VIIRS_SCA', 'hasSnow']
@@ -92,14 +91,26 @@ def DataProcess(test_year, frequency, modelname, Region_list):
         #get max SWE for normalization and prediction
         SWEmax = max(RegionTrain[Region]['SWE'])
         y = y/SWEmax
+        
+        #make a df copy of specific region
+        df = RegionTrain.get(Region).copy()
+    
 
         #get optimal features for each regions (from LGBM RFE), first pop off fSCA
         optfeatures = list(Region_optfeatures[Region])
+        if fSCA == True:
+            VIIRS_cols.append('HasSnow')
+            optfeatures.append('VIIRS_SCA')
+            optfeatures.append('HasSnow')
+            df['HasSnow'] = 0
+            df['HasSnow'][df['hasSnow']==True] = 1
+            #df.pop('hasSnow')
+            
 
-        #make a df copy of specific region
-        df = RegionTrain.get(Region).copy()
+
         dfVIIRS = df[VIIRS_cols].copy()
         dfVIIRS.reset_index(inplace = True)
+        
         df = df[optfeatures]
 
         ### replace special character ':' with '__' 
@@ -113,12 +124,16 @@ def DataProcess(test_year, frequency, modelname, Region_list):
         scaler = MinMaxScaler(feature_range=(0, 1))
         #save scaler data here too
         scaled = scaler.fit_transform(df)
-        dump(scaler, open(f"./Model/{Region}/{Region}_scaler.pkl", 'wb'))
+        checkpoint_filepath = f"./Model/{Region}/fSCA_{fSCA}/"
+        if not os.path.exists(checkpoint_filepath):
+            os.makedirs(checkpoint_filepath)
+        dump(scaler, open(f"{checkpoint_filepath}{Region}_scaler.pkl", 'wb'))
         
         df = pd.DataFrame(scaled, columns = df.columns)
 
         #Add Viirs colums
         df = pd.concat([df, dfVIIRS], axis = 1)
+        df = df.loc[:,~df.columns.duplicated()].copy()
         df.set_index('index', inplace = True, drop = True)
 
         #Set the 75/25% train/test split, set a random state to get train/test for future analysis
@@ -137,8 +152,8 @@ def DataProcess(test_year, frequency, modelname, Region_list):
         RegionObs_Test[Region] = pd.DataFrame(y_test, columns = ['SWE'])
         RegionWYTest.to_hdf(f"./Predictions/Hold_Out_Year/{frequency}/RegionWYTest.h5", Region)
         SWEmax = np.array(SWEmax)
-        print(f"Model/{Region}/{Region}_SWEmax.npy")
-        np.save(f"Model/{Region}/{Region}_SWEmax.npy" , SWEmax)
+        print(f"{checkpoint_filepath}{Region}_SWEmax.npy")
+        np.save(f"{checkpoint_filepath}{Region}_SWEmax.npy" , SWEmax)
     
     
     return RegionTrain, RegionTest, RegionObs_Train, RegionObs_Test, RegionTest_notScaled

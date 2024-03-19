@@ -71,7 +71,7 @@ BUCKET = S3.Bucket(BUCKET_NAME)
 
 class NSM_SCA(SWE_Prediction):
 
-    def __init__(self, date: Union[str, datetime], timeDelay=3, threshold=0.2, Regions = ['N_Sierras'], modelname = 'Neural_Network', frequency = 'Weekly'):
+    def __init__(self, date: Union[str, datetime], timeDelay=3, threshold=0.2, Regions = ['N_Sierras'], modelname = 'Neural_Network', frequency = 'Weekly', fSCA = False):
         """
             Initializes the NSM_SCA class by calling the superclass constructor.
 
@@ -251,7 +251,7 @@ class NSM_SCA(SWE_Prediction):
         # close file
         file.close()
 
-    def SWE_Predict(self, SCA=True, NewSim = True, modelname = 'Neural_Network'):
+    def SWE_Predict(self, SCA=True, NewSim = True, modelname = 'Neural_Network', Corrections = False, fSCA = False):
         # load first SWE observation forecasting dataset with prev and delta swe for observations.
         self.modelname = modelname
         path = f"./Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_SCA_{self.date}.pkl"
@@ -282,6 +282,12 @@ class NSM_SCA(SWE_Prediction):
         except:
             S3.meta.client.download_file(BUCKET_NAME, f"data/Optimal_Features.pkl",f"{HOME}/SWEML/data/Optimal_Features.pkl")
             self.Region_optfeatures = pickle.load(open(f"{HOME}/SWEML/data/Optimal_Features.pkl", "rb"))
+        if fSCA == True:
+            for region in self.Region_optfeatures.keys():
+                self.Region_optfeatures[region] = list(self.Region_optfeatures[region])
+                self.Region_optfeatures[region].append('VIIRS_SCA')
+                self.Region_optfeatures[region].append('HasSnow')
+            
 
         # Reorder regions
         self.Forecast = {k: self.Forecast[k] for k in self.Region_list}
@@ -289,23 +295,24 @@ class NSM_SCA(SWE_Prediction):
         # Make and save predictions for each region
         self.Prev_df = pd.DataFrame()
         self.predictions = {}
-        print('Making predictions for: ', self.date)
+       # print('Making predictions for: ', self.date)
 
         for Region in self.Region_list:
-            print(Region)
-            if self.modelname =='LSTM':
-                print(self.Predict(Region))
-            self.predictions[Region] = self.Predict(Region)
+            #print(Region)
+            # if self.modelname =='LSTM':
+            #     print(self.Predict(Region)) 
+            self.predictions[Region] = self.Predict(Region, Corrections = Corrections, fSCA= fSCA)
             self.predictions[Region] = pd.DataFrame(self.predictions[Region])
             self.Prev_df = pd.concat([self.Prev_df, self.predictions[Region][[self.date]]])  # pandas 2.0 update
             self.Prev_df = pd.DataFrame(self.Prev_df)
             
-            if NewSim == False:
+#             if NewSim == False:
             
-                if fdate < f"2019-06-30":
-                    #save prediction for the next timesteps prev SWE feature
-                    FutureForecast[Region]['prev_SWE'] = self.predictions[Region][self.date]
+#                 if fdate < f"2019-06-30":
+#                     #save prediction for the next timesteps prev SWE feature
+#                     FutureForecast[Region]['prev_SWE'] = self.predictions[Region][self.date]
 
+            
         if NewSim == False:
         #save future timestep prediction
             if fdate < f"2019-06-30":
@@ -314,10 +321,10 @@ class NSM_SCA(SWE_Prediction):
                 pickle.dump(FutureForecast, fpath)
                 fpath.close()
                 
-        if NewSim == True:
+        #if NewSim == True:
                 #save forecast into pkl file
-                futurepath = f"./Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_SCA_{self.date}.pkl"
-                file = open(futurepath, "wb")
+                currentpath = f"./Predictions/Hold_Out_Year/{self.frequency}/fSCA_{fSCA}/Prediction_DF_SCA_{self.date}.pkl"
+                file = open(currentpath, "wb")
                 pickle.dump(self.predictions, file)
                 file.close()
                 
@@ -328,10 +335,10 @@ class NSM_SCA(SWE_Prediction):
         else:
             year = str(int(self.date[:4]))
                     
-        self.Prev_df.to_hdf(f"./Predictions/Hold_Out_Year/{self.frequency}/{year}_predictions.h5", key=self.date)
+        self.Prev_df.to_hdf(f"./Predictions/Hold_Out_Year/{self.frequency}/fSCA_{fSCA}/{year}_predictions.h5", key=self.date)
 
 
-    def Predict(self, Region, SCA=True):
+    def Predict(self, Region, SCA=True, Corrections = False, fSCA = False):
         """
             Run model inference on a region
 
@@ -347,6 +354,9 @@ class NSM_SCA(SWE_Prediction):
 
         # Make prediction dataframe
         forecast_data = self.Forecast[Region].copy()
+        if fSCA == True:
+            forecast_data['HasSnow'] = 0
+            forecast_data['HasSnow'][forecast_data['hasSnow']==True] = 1
 
         if SCA:
             # drop all rows that have a False value in "hasSnow", i.e. no snow, so skip inference
@@ -354,7 +364,7 @@ class NSM_SCA(SWE_Prediction):
         else:
             # keep all rows
             inference_locations = forecast_data
-
+        # print(features)
         forecast_data = inference_locations[features]  # Keep only features needed for inference
 
         if len(inference_locations) == 0:  # makes sure that we don't run inference on empty regions
@@ -366,7 +376,7 @@ class NSM_SCA(SWE_Prediction):
 
             # load model - add if self.modelname == 'modelname' to change folder/model file type (i.e., RF, XGBoost, CNN...)
             if self.modelname == 'Neural_Network':
-                checkpoint_filepath = f"./Model/{Region}/"
+                checkpoint_filepath = f"./Model/{Region}/fSCA_{fSCA}/"
                 model = keras.models.load_model(f"{checkpoint_filepath}{Region}_model.keras")
             if self.modelname == 'LSTM':
                 checkpoint_filepath = f"./Model/{Region}/"
@@ -387,23 +397,50 @@ class NSM_SCA(SWE_Prediction):
                 x_forecast = x_forecast.to_numpy()
                 x_forecast = x_forecast.reshape(x_forecast.shape[0], 1, x_forecast.shape[1])
 
-            y_forecast = (model.predict(x_forecast))
-            y_forecast[y_forecast < 0] = 0
+            #make predictions
+            y_forecast = model.predict(x_forecast, verbose=0)
             y_forecast = (SWEmax * y_forecast)
-            # remove forecasts less than 0.5 inches SWE
-            y_forecast[y_forecast < 0.5] = 0  # TODO address this with research, try smaller values/no value
-
+            
             # add predictions to forecast dataframe
             self.forecast_data = forecast_data
             self.y_forecast = y_forecast
             self.Forecast[Region][self.date] = 0.0  # initialize column
-            forecast_data[self.date] = self.y_forecast  # add column
+            self.forecast_data[self.date] = self.y_forecast  # add column
+            
+            #somehow predicting SWE for locations with fSCA below threshold
+            self.Forecast[Region][self.date][self.Forecast[Region]['hasSnow'] == False] = 0
+
             
             #drop any duplicates
             self.Forecast[Region] = self.Forecast[Region].reset_index().drop_duplicates(subset='cell_id', keep='last').set_index('cell_id')
             self.forecast_data= self.forecast_data.reset_index().drop_duplicates(subset='cell_id', keep='last').set_index('cell_id')
 
             self.Forecast[Region][self.date].update(self.forecast_data[self.date])  # update forecast dataframe
+            
+             #adding physical constraints to the model
+            #Cannot have - SWE, make any negative values 0, remove forecasts less than 0.5 inches SWE
+            self.Forecast[Region][self.date][self.Forecast[Region][self.date] < 0.5] =0
+   
+            # #add mean delta values to df, use them to constrain the model+
+            if Corrections ==True:
+                #just focus on SWE obs
+                deltacols = [col for col in self.Forecast[Region].columns if 'Delta' in col]
+                Deltas = self.Forecast[Region][deltacols].copy()
+                deltacols = [col for col in Deltas.columns if 'Delta' in col]
+                #add max to deltas to constrain model
+                self.Forecast[Region]['delta_max'] = Deltas.values.max()
+                self.Forecast[Region]['delta_min'] = Deltas.values.min()
+                self.Forecast[Region]['Delta_SWE'] = self.Forecast[Region][self.date] - self.Forecast[Region]['prev_SWE']
+
+                #adjust max SWE
+                self.Forecast[Region]['predMax'] = self.Forecast[Region]['prev_SWE']+(self.Forecast[Region]['delta_max']*1.1)
+                self.Forecast[Region]['predCorr'] = self.Forecast[Region][self.date]
+                self.Forecast[Region]['predCorr'][self.Forecast[Region]['predCorr'] > self.Forecast[Region]['predMax']] = self.Forecast[Region]['predMax']
+                self.Forecast[Region][f"{self.date}_OG"] = self.Forecast[Region][self.date].copy()
+                self.Forecast[Region][self.date] = self.Forecast[Region]['predCorr'].copy()
+
+                #clean up pred DF
+                self.Forecast[Region].pop('predCorr')
 
         return self.Forecast[Region]
 

@@ -36,7 +36,7 @@ BUCKET_NAME = 'national-snow-model'
 BUCKET = S3.Bucket(BUCKET_NAME)
 
 #Function for initializing a hindcast
-def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list, frequency): 
+def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list, frequency, fSCA = False): 
     print('Creating files for a historical simulation within ', str(Region_list)[1:-1], ' regions for water year ', new_year)
     #set day_delta
     if frequency == 'Weekly':
@@ -45,7 +45,7 @@ def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list, fre
         day_delta = 1
 
     PreProcessedpath = "PaperData/Data/PreProcessed/"
-    HoldOutpath = f"PaperData/Data/Predictions/Hold_Out_Year/{frequency}"
+    HoldOutpath = f"PaperData/Data/Predictions/Hold_Out_Year/{frequency}/fSCA_{fSCA}/"
 
     #Grab existing files based on water year
     prev_year = '2022'
@@ -86,9 +86,11 @@ def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list, fre
 
     old_preds.rename(columns = {'2022-10-01':new_preds_date}, inplace = True)  
     old_preds.set_index('cell_id', inplace = True)
-
-
-    old_preds.to_hdf(f"{cwd}/Predictions/Hold_Out_Year/{frequency}/submission_format.h5", key =f"{new_date}")
+    
+    predictionfolder = f"{cwd}/Predictions/Hold_Out_Year/{frequency}/fSCA_{fSCA}"
+    if not os.path.exists(predictionfolder):
+        os.makedirs(predictionfolder)
+    old_preds.to_hdf(f"{predictionfolder}/submission_format.h5", key =f"{new_date}")
 
 
     #define start and end date for list of dates
@@ -96,7 +98,7 @@ def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list, fre
         start_dt = date(int(new_year), 10, 1)
     if frequency == 'Weekly':
         start_dt = date(int(new_year), 10, 2)
-    end_dt = date(int(new_year)+1, 6, 26)
+    end_dt = date(int(new_year)+1, 6, 27)
 
     #create empty list to store dates
     datelist = []
@@ -116,7 +118,7 @@ def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list, fre
 
     #need to bring in a prediction folder template 2018-09-25
     key = f"data/Prediction_DF_SCA_2018-09-25.pkl"      
-    path = f"Predictions/Hold_Out_Year/{frequency}/Prediction_DF_SCA_{start_dt-timedelta(day_delta)}.pkl"
+    path = f"Predictions/Hold_Out_Year/{frequency}/fSCA_{fSCA}/Prediction_DF_SCA_{start_dt-timedelta(day_delta)}.pkl"
     S3.meta.client.download_file(BUCKET_NAME, key,path)
     PSCA = open(path, "rb")
     PSCA = pd.read_pickle(PSCA)
@@ -139,6 +141,8 @@ def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list, fre
         PSCA[region].rename(columns ={'2018-09-25':str(pd.to_datetime(start_dt)-timedelta(day_delta))[:10]}, inplace = True)
     pickle.dump(PSCA, open(path, "wb"))
 
+    #add other ground measure features.h5
+    
     try:
         obs_path = f"{HOME}/SWEML/data/PreProcessed/DA_ground_measures_features.h5"
         temp = pd.read_hdf(obs_path, key = str(pd.to_datetime(start_dt)-timedelta(day_delta))[:10])
@@ -163,21 +167,22 @@ def daterange(start_date, end_date, day_delta):
         
         
         
-def HindCast_DataProcess(datelist,Region_list, cwd, datapath, model, frequency):
+def HindCast_DataProcess(datelist,Region_list, cwd, datapath, model, frequency,fSCA = False):
     if frequency == 'Weekly':
         day_delta = 7
     if frequency == 'Daily':
         day_delta = 1
        #get held out year observational data
     Test = pd.DataFrame()
-    cols = ['Date','y_test','Long', 'Lat', 'elevation_m', 'WYWeek', 'northness', 'VIIRS_SCA', 'hasSnow', 'Region']
     for Region in Region_list:
         T= pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/{frequency}/RegionWYTest.h5", Region)
         T['Region'] = Region
         #T['y_pred'] = -9999
         T.rename(columns = {'SWE':'y_test'}, inplace = True)
+        cols = ['Date','y_test','Long', 'Lat', 'elevation_m', 'WYWeek', 'northness', 'VIIRS_SCA', 'hasSnow', 'Region']
         T = T[cols]
         Test = pd.concat([Test, T])
+        
 
     
     #update datelist with Test obs
@@ -196,13 +201,13 @@ def HindCast_DataProcess(datelist,Region_list, cwd, datapath, model, frequency):
     print('Getting prediction files')
     for date in datelist:
 
-        try:
-            preds[date] = pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/{frequency}/2019_predictions.h5", key = date)
-        except:
-            print('No prediction file found, retrieving from AWS')
-            S3.meta.client.download_file(BUCKET_NAME, f"{model}/Hold_Out_Year/{frequency}/2019_predictions.h5",f"{cwd}/Predictions/Hold_Out_Year/{frequency}/2019_predictions.h5")
-            preds[date] = pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/{frequency}/2019_predictions.h5", key = date)
-            print('File loaded, proceeding...')
+#         try:
+        preds[date] = pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/{frequency}/fSCA_{fSCA}/2019_predictions.h5", key = date)
+#         except:
+#             print('No prediction file found, retrieving from AWS')
+#             S3.meta.client.download_file(BUCKET_NAME, f"{model}/Hold_Out_Year/{frequency}/2019_predictions.h5",f"{cwd}/Predictions/Hold_Out_Year/{frequency}/2019_predictions.h5")
+#             preds[date] = pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/{frequency}/2019_predictions.h5", key = date)
+#             print('File loaded, proceeding...')
         
         #get previous SWE predictions for DF
         startdate = str(datetime.strptime(date, '%Y-%m-%d').date() -timedelta(day_delta))
@@ -211,7 +216,7 @@ def HindCast_DataProcess(datelist,Region_list, cwd, datapath, model, frequency):
             prev_SWE[startdate] = 0
             
         else:
-            prev_SWE[startdate] = pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/{frequency}/2019_predictions.h5", key = startdate)
+            prev_SWE[startdate] = pd.read_hdf(f"{cwd}/Predictions/Hold_Out_Year/{frequency}/fSCA_{fSCA}/2019_predictions.h5", key = startdate)
         
         
         Tdata = Test[Test['Date'] == date]
@@ -243,28 +248,14 @@ def HindCast_DataProcess(datelist,Region_list, cwd, datapath, model, frequency):
                 missing_sites.append(site)
                 missing_dates.append(date)
      
-               
-            
-            #previous SWE
-#             pSWE = pd.DataFrame(preds.loc[site].copy()).T
-#             pSWE['Date'] = date
-#             pSWE.rename(columns = {startdate:'prev_SWE'}, inplace = True)
-#             cols =['Date', 'prev_SWE']
-#             pSWE = pSWE[cols]
-            
-#             #print(s)
-#             s['prev_SWE'] = pSWE['prev_SWE']
-             #pred_sites = pd.concat([pred_sites, s])
 
     print('Site data processing complete, setting up prediction dataframes...')  
     pswecols = ['Date', 'y_test']
     # TestsiteDataPSWE = TestsiteDataPSWE[pswecols]
     # TestsiteDataPSWE.rename(columns = {'y_test':'y_test_prev'}, inplace = True)
-    # display(TestsiteDataPSWE)       
-    
-    #get predictions for obs locations
-    #cols = ['Date','y_test', 'y_test_prev', 'y_pred','prev_SWE','Long', 'Lat', 'elevation_m', 'WYWeek', 'northness', 'VIIRS_SCA', 'hasSnow', 'Region']
-    cols = ['Date','y_test', 'y_pred','Long', 'Lat', 'elevation_m', 'WYWeek', 'northness', 'VIIRS_SCA', 'hasSnow', 'Region']
+    # display(TestsiteDataPSWE)              
+        
+    #cols = ['Date','y_test', 'y_pred','Long', 'Lat', 'elevation_m', 'WYWeek', 'northness', 'VIIRS_SCA', 'hasSnow', 'Region']
     TestsiteData['Date'] = TestsiteData['Date'].astype('str')
     
     pred_sites.reset_index(inplace = True)
@@ -281,19 +272,27 @@ def HindCast_DataProcess(datelist,Region_list, cwd, datapath, model, frequency):
     # TestsiteData = pd.merge(TestsiteData, TestsiteDataPSWE,  how='left', left_on=['index','Date'], right_on = ['index','Date'])
     #TestsiteData.set_index('index', inplace = True)
     TestsiteData.fillna(0, inplace = True)
-    TestsiteData = TestsiteData[cols]
+    #TestsiteData = TestsiteData[cols]
     # TestsiteData['prev_SWE_error'] = TestsiteData['y_test_prev'] - TestsiteData['prev_SWE']
     #Set up dictionary to match the training data
     EvalTest = {}
     print('Finalizing Evaluation dataframes...')
     for Region in Region_list:
         EvalTest[Region] = TestsiteData[TestsiteData['Region'] == Region]
+        #fix any predictions that should be 0 bc of FSCA and correct test sites with no snow cover
+        EvalTest[Region]['y_test'][EvalTest[Region]['hasSnow'] == False] = 0
+        EvalTest[Region]['y_pred'][EvalTest[Region]['hasSnow'] == False] = 0
+        #convert to cm
         EvalTest[Region]['y_pred'] = EvalTest[Region]['y_pred']*2.54
         EvalTest[Region]['y_pred_fSCA'] = EvalTest[Region]['y_pred']
         EvalTest[Region]['y_test'] = EvalTest[Region]['y_test']*2.54
-        # EvalTest[Region]['y_test_prev'] = EvalTest[Region]['y_test_prev']*2.54
-        # EvalTest[Region]['prev_SWE'] = EvalTest[Region]['prev_SWE']*2.54
-
+        
+        #drop all rows where FSCA is True but  obs say 0
+        EvalTest[Region].reset_index(inplace = True, drop = False)
+        EvalTest[Region] = EvalTest[Region].drop(EvalTest[Region][(EvalTest[Region]['y_test'] < 0.1) & (EvalTest[Region]['hasSnow'] == True)].index)
+        EvalTest[Region].set_index('index', inplace = True)
+        
+ 
     print('There were ', len(missing_sites), ' sites missing from the prediction dataset occuring on ', list(set(missing_dates)))
     return  EvalTest, missing_sites
         
@@ -405,10 +404,10 @@ def Region_id(df):
     return df
 
 #function for making a gif/timelapse of the hindcast
-def Snowgif(cwd, datelist, Region_list,frequency):
+def Snowgif(cwd, datelist, Region_list,frequency, fSCA):
     
     #Load prediction file with geospatial information
-    path = f"{cwd}/Predictions/Hold_Out_Year/{frequency}/Prediction_DF_SCA_2018-10-02.pkl"
+    path = f"{cwd}/Predictions/Hold_Out_Year/{frequency}/fSCA_{fSCA}/Prediction_DF_SCA_2018-10-02.pkl"
     geofile =open(path, "rb")
     geofile = pickle.load(geofile)
     cols = ['Long', 'Lat']
@@ -424,7 +423,7 @@ def Snowgif(cwd, datelist, Region_list,frequency):
         geo_df, geometry=gpd.points_from_xy(geo_df.Long, geo_df.Lat), crs="EPSG:4326"
     )
 
-    path = f"{cwd}/Predictions/Hold_Out_Year/{frequency}/2019_predictions.h5"
+    path = f"{cwd}/Predictions/Hold_Out_Year/{frequency}/fSCA_{fSCA}/2019_predictions.h5"
     #get predictions for each timestep
     print('processing predictions into geodataframe')
     for date in tqdm(datelist):
@@ -447,9 +446,10 @@ def Snowgif(cwd, datelist, Region_list,frequency):
                      #figsize=(10, 10), 
                      alpha=0.5, 
                      markersize = 10,
-                     edgecolor="k", 
+                     edgecolor="none", 
+                    cmap = 'Blues',
                      vmin =1, 
-                     vmax =250,
+                     vmax =180,
                     legend = True,
                     legend_kwds={"label": "Snow Water Equivalent (cm)", "orientation": "vertical"},
                     ax = ax)
