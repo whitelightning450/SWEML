@@ -129,10 +129,11 @@ def parityplot(RegionTest):
                                round(rmse,2), 
                                round(kge[0],2),
                                round(pbias[0],2),
-                               round(r2_fSCA,2),
-                               round(rmse_fSCA,2),
-                              round(kge_fSCA[0],2),
-                              round(pbias_fSCA[0],2)])
+                              #  round(r2_fSCA,2),
+                              #  round(rmse_fSCA,2),
+                              # round(kge_fSCA[0],2),
+                              # round(pbias_fSCA[0],2)
+                              ])
         
         error = pd.DataFrame(data = error_data.reshape(-1, len(error_data)), 
                              columns = ['Region', 
@@ -140,14 +141,31 @@ def parityplot(RegionTest):
                                         'RMSE',
                                         'KGE', 
                                         'PBias', 
-                                        'R2_fSCA',
-                                        'RMSE_fSCA',
-                                        'KGE_fSCA', 
-                                        'PBias_fSCA',
+                                        # 'R2_fSCA',
+                                        # 'RMSE_fSCA',
+                                        # 'KGE_fSCA', 
+                                        # 'PBias_fSCA',
                                        ])
         Performance = pd.concat([Performance, error], ignore_index = True)
       
     return Performance
+
+def regionsiteTSeval(region, EvalDF, plot = True):
+    sites = list(set(EvalDF[region].index))
+    sitedic = {}
+    colorder = ['Date','y_test', 'y_pred', 'VIIRS_SCA', 'hasSnow', 'Region', 'Long', 'Lat', 'elevation_m', 'WYWeek', 'northness']
+    for site in sites:
+        sitedic[site] = EvalDF[region][ EvalDF[region].index == site]
+        sitedic[site]= sitedic[site][colorder]
+        sitedic[site]['site'] = site
+        sitedic[site].set_index('Date', inplace = True)
+        if plot ==  True:
+            cols = ['y_test', 'y_pred']
+            if len(sitedic[site]) >4:
+                sitedf = sitedic[site][cols]
+                sitedf.plot(title = site)
+        
+    return sitedic
     
     
     
