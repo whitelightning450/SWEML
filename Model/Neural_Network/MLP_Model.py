@@ -205,15 +205,19 @@ def Model_predict(RegionTest, RegionObs_Test, RegionTest_notScaled, Region_list,
         #checkpoint_filepath = f"./Model/{Region}/"
         checkpoint_filepath = f"./Model/{Region}/fSCA_{fSCA}/"
         #load the model with highest performance
-        bestmodel = [f for f in listdir(checkpoint_filepath) if isfile(join(checkpoint_filepath, f))]
-        bestmodel.sort(key=natural_keys)
-        bestmodel = checkpoint_filepath+bestmodel[0]
-        model=load_model(bestmodel)
+        try:
+            model = keras.models.load_model(f"{checkpoint_filepath}{Region}_model.keras")
+        except:
+            bestmodel = [f for f in listdir(checkpoint_filepath) if isfile(join(checkpoint_filepath, f))]
+            bestmodel.sort(key=natural_keys)
+            bestmodel = checkpoint_filepath+bestmodel[0]
+            model=load_model(bestmodel)
+        
     # print(bestmodel)
-        #save this model
-        model.save(f"{checkpoint_filepath}{Region}_model.keras")
-        #make sure the model loads
-        model = keras.models.load_model(f"{checkpoint_filepath}{Region}_model.keras")
+            #save this model
+            model.save(f"{checkpoint_filepath}{Region}_model.keras")
+            #make sure the model loads
+            model = keras.models.load_model(f"{checkpoint_filepath}{Region}_model.keras")
 
 
          #Load SWEmax
@@ -252,8 +256,8 @@ def Prelim_Eval(Predictions):
         pred_obs = Predictions[Region]
         
         #set up model checkpoint to be able to extract best models
-        checkpoint_filepath = f"./Model/{Region}/"
-        SWEmax = np.load(f"{checkpoint_filepath}/{Region}_SWEmax.npy")
+        checkpoint_filepath = f"./Model/{Region}/fSCA_True/"
+        SWEmax = np.load(f"{checkpoint_filepath}{Region}_SWEmax.npy")
         #convert to cm
         pred_obs['y_test'] = pred_obs['y_test']*2.54
         pred_obs['y_pred'] = pred_obs['y_pred']*2.54
