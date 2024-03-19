@@ -124,6 +124,7 @@ class NSM_SCA(SWE_Prediction):
                     Z.extract(elem, f"{HOME}/SWEML/data/VIIRS/WY{self.year}/")
                 #zip_ref.extractall(f"{HOME}/SWEML/data/VIIRS/WY{self.year}/")
         self.SCA_folder = f"{self.SCA_directory}{int(self.year)-1}-{self.year}NASA/"
+        self.fSCA = fSCA
 
 
     def initializeGranules(self, getdata = False):
@@ -254,7 +255,7 @@ class NSM_SCA(SWE_Prediction):
     def SWE_Predict(self, SCA=True, NewSim = True, modelname = 'Neural_Network', Corrections = False, fSCA = False):
         # load first SWE observation forecasting dataset with prev and delta swe for observations.
         self.modelname = modelname
-        path = f"./Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_SCA_{self.date}.pkl"
+        path = f"./Predictions/Hold_Out_Year/{self.frequency}/fSCA_{self.fSCA}/Prediction_DF_SCA_{self.date}.pkl"
 
         if NewSim == False:
          
@@ -263,7 +264,7 @@ class NSM_SCA(SWE_Prediction):
             fdate = fdate.strftime("%Y-%m-%d")
 
             try:
-                futurepath = f"./Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_SCA_{fdate}.pkl"
+                futurepath = f"./Predictions/Hold_Out_Year/{self.frequency}/fSCA_{self.fSCA}/Prediction_DF_SCA_{fdate}.pkl"
                 # load regionalized forecast data
                 #current forecast
                 self.Forecast = open(path, "rb")
