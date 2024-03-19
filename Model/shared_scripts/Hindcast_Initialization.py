@@ -98,7 +98,7 @@ def Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list, fre
         start_dt = date(int(new_year), 10, 1)
     if frequency == 'Weekly':
         start_dt = date(int(new_year), 10, 2)
-    end_dt = date(int(new_year)+1, 6, 27)
+    end_dt = date(int(new_year)+1, 6, 25)
 
     #create empty list to store dates
     datelist = []
