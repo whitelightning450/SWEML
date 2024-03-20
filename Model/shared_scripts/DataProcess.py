@@ -114,7 +114,7 @@ def DataProcess(test_year, frequency, modelname, Region_list, fSCA = False):
         df = df[optfeatures]
 
         ### replace special character ':' with '__' 
-        df = df.rename(columns = lambda x:re.sub(':', '__', x))
+        # df = df.rename(columns = lambda x:re.sub(':', '__', x))
 
         #change all na values to prevent scaling issues
         df[df< -9000]= -10    
