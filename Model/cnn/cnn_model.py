@@ -2,6 +2,8 @@
 # SWEET supported by the University of Alabama and the Alabama Water Institute
 # 10-19-2023
 
+# CNN added by Savalan Naser Neisary, Ph.D. Student at The University of Alabama and CIROH member.
+
 import os
 from os import listdir
 from os.path import isfile, join
