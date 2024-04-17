@@ -15,3 +15,5 @@ Data/WBD/
 *.pyc
 *.tif
 *.tif.xml
+*.tif.aux.xml
+*.zip
