@@ -12,6 +12,7 @@ import sys
 import time
 import getpass
 import shutil
+import pandas as pd
 
 try:
     from urllib.parse import urlparse
@@ -22,6 +23,15 @@ except ImportError:
     from urllib2 import urlopen, Request, HTTPError, URLError, build_opener, HTTPCookieProcessor
     
 import netrc
+
+'''
+To create .netrc file:
+import earthaccess
+earthaccess.login(persist=True)
+open file and change machine to https://urs.earthdata.nasa.gov
+
+'''
+
 from urllib.parse import urlparse
 
 """"
@@ -41,10 +51,13 @@ CMR_FILE_URL = ('{0}/search/granules.json?provider=NSIDC_ECS'
                 '&sort_key[]=start_date&sort_key[]=producer_granule_id'
                 '&scroll=true&page_size={1}'.format(CMR_URL, CMR_PAGE_SIZE))
 
+#load access key
+HOME = os.path.expanduser('~')
+
 def get_login_credentials():
     try:
         info = netrc.netrc()
-        username, password = info.authenticators(URS_URL)
+        username,none, password = info.authenticators(URS_URL)
         credentials = f'{username}:{password}'
         credentials = base64.b64encode(credentials.encode('ascii')).decode('ascii')
     except Exception:
