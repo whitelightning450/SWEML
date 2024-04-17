@@ -13,3 +13,5 @@ Data/WBD/
 *.parquet
 /Figures/*
 *.pyc
+*.tif
+*.tif.xml
