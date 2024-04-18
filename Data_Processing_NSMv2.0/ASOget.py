@@ -194,9 +194,9 @@ class ASODataProcessing:
             date = os.path.splitext(input_file)[0].split("_")[-1]
             
             # Define the output file path
-            output_folder = os.path.join(output_path, "Processed_Data")
+            output_folder = os.path.join(output_path, f"Processed_{output_res}M_SWE")
             os.makedirs(output_folder, exist_ok=True)
-            output_file = os.path.join(output_folder, f"ASO_100M_{date}.tif")
+            output_file = os.path.join(output_folder, f"ASO_{output_res}M_{date}.tif")
     
             ds = gdal.Open(input_file)
             if ds is None:
@@ -204,7 +204,8 @@ class ASODataProcessing:
                 return None
             
             # Reproject and resample
-            gdal.Warp(output_file, ds, dstSRS="EPSG:4326", xRes=output_res, yRes=-output_res, resampleAlg="bilinear")
+            Res = (1/output_res)*.1
+            gdal.Warp(output_file, ds, dstSRS="EPSG:4326", xRes=Res, yRes=-Res, resampleAlg="bilinear")
     
             # Read the processed TIFF file using rasterio
             rds = rxr.open_rasterio(output_file)
@@ -247,8 +248,8 @@ class ASODataProcessing:
                 date = os.path.splitext(tiff_filename)[0].split("_")[-1]
     
                 # Define the CSV filename and folder
-                csv_filename = f"ASO_SWE_{date}.csv"
-                csv_folder = os.path.join(dir, "SWE_csv")
+                csv_filename = f"ASO_{output_res}M_SWE_{date}.csv"
+                csv_folder = os.path.join(dir, f"{output_res}M_SWE_csv")
                 os.makedirs(csv_folder, exist_ok=True)
                 csv_filepath = os.path.join(csv_folder, csv_filename)
     
@@ -265,29 +266,32 @@ class ASODataProcessing:
 
     def process_folder(self, input_folder, metadata_path, output_folder):
         # Import the metadata into a pandas DataFrame
+
         '''
-        input_folder = f"{HOME}/data/NSMv2.0/data/Processed_Data/SWE_csv"
-        metadata_path = f"{HOME}/data/NSMv2.0/data/Provided_Data/grid_cells_meta.csv"
-        output_folder = f"{HOME}/data/NSMv2.0/data/Processed_SWE"
+        input_folder = f"ASO/100M_SWE_csv"
+        metadata_path = f"Provided_Data/grid_cells_meta.csv"
+        output_folder = f"Processed_SWE"
         '''
+        
+        input_folder = f"{HOME}/SWEML/data/NSMv2.0/data/{input_folder}"
+        metadata_path = f"{HOME}/SWEML/data/NSMv2.0/data/{metadata_path}"
+        output_folder = f"{HOME}/SWEML/data/NSMv2.0/data/{output_folder}"
+        
         try:
             pred_obs_metadata_df = pd.read_csv(metadata_path)
         except:
+            print("metadata not found, retreiving from AWS S3")
             key = "NSMv2.0"+metadata_path.split("NSMv2.0",1)[1]        
             S3.meta.client.download_file(BUCKET_NAME, key,metadata_path)
             pred_obs_metadata_df = pd.read_csv(metadata_path)
 
-
-        # Get all SWE_csv into the input folder
-        csv_files = [f for f in os.listdir(input_folder) if f.endswith('.csv')]
-
-            
-    
         # Assuming create_polygon is defined elsewhere, we add a column with polygon geometries
+        print("Applying polygon geometries, please be patient, this step can take a few minutes...")
         pred_obs_metadata_df = pred_obs_metadata_df.drop(columns=['Unnamed: 0'], axis=1)
         pred_obs_metadata_df['geometry'] = pred_obs_metadata_df.apply(self.create_polygon, axis=1)
     
         # Convert the DataFrame to a GeoDataFrame
+        print("Converting to GeoDataFrame")
         metadata = gpd.GeoDataFrame(pred_obs_metadata_df, geometry='geometry')
     
         # Drop coordinates columns
@@ -298,8 +302,9 @@ class ASODataProcessing:
     
         # List all CSV files in the input folder
         csv_files = [f for f in os.listdir(input_folder) if f.endswith('.csv')]
-    
-        for csv_file in csv_files:
+
+        print(f"Processing {len(csv_files)} files for dataframe development")
+        for csv_file in tqdm(csv_files):
             input_aso_path = os.path.join(input_folder, csv_file)
             output_aso_path = os.path.join(output_folder, csv_file)
     
@@ -327,7 +332,7 @@ class ASODataProcessing:
     
             # Save the processed DataFrame to a CSV file
             Final_df.to_csv(output_aso_path, index=False)
-            print(f"Processed {csv_file}")
+            #print(f"Processed {csv_file}")
             
     def converting_ASO_to_standardized_format(self, input_folder, output_csv):
         

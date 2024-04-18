@@ -18,3 +18,4 @@ Data/WBD/
 *.tif.aux.xml
 *.zip
 *.ipynb_checkpoints/
+*.nfs*
