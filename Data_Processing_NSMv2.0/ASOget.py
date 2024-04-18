@@ -189,12 +189,12 @@ class ASODownload(ASODataTool):
 class ASODataProcessing:
     
     @staticmethod
-    def processing_tiff(input_file, output_res):
+    def processing_tiff(input_file, output_path, output_res):
         try:
             date = os.path.splitext(input_file)[0].split("_")[-1]
             
             # Define the output file path
-            output_folder = os.path.join(os.getcwd(), "Processed_Data")
+            output_folder = os.path.join(output_path, "Processed_Data")
             os.makedirs(output_folder, exist_ok=True)
             output_file = os.path.join(output_folder, f"ASO_100M_{date}.tif")
     
@@ -240,7 +240,7 @@ class ASODataProcessing:
             
             # Open the TIFF file
             tiff_filepath = os.path.join(folder_path, tiff_filename)
-            df = ASODataProcessing.processing_tiff(tiff_filepath, output_res)
+            df = ASODataProcessing.processing_tiff(tiff_filepath, dir, output_res)
     
             if df is not None:
                 # Get the date from the TIFF filename
