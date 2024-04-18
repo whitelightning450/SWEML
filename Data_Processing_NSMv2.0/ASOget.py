@@ -24,7 +24,6 @@ from osgeo import gdalconst
 import earthaccess as ea
 import h5py
 import pickle
-from tensorflow.keras.models import load_model
 from pystac_client import Client
 import richdem as rd
 import planetary_computer
@@ -113,8 +112,8 @@ class ASODataTool:
         except KeyboardInterrupt:
             quit()
 
-    def cmr_download(self, directory):
-        dpath = f"{HOME}/SWEML/data/NSMv2.0/data/ASO/{directory}"
+    def cmr_download(self, directory, region):
+        dpath = f"{HOME}/SWEML/data/NSMv2.0/data/ASO/{directory}/{region}"
         if not os.path.exists(dpath):
             os.makedirs(dpath, exist_ok=True)
 
@@ -167,20 +166,20 @@ class ASODownload(ASODataTool):
                                 'Greater_Glacier',
                                 'Or_Coast'  ]
 
-    def select_region(self):
-        print("Select a region by entering its index:")
-        for i, region in enumerate(self.region_list, start=1):
-            print(f"{i}. {region}")
-
+    def select_region(self, region):
+        #print("Select a region by entering its index:")
+        print(f"Getting ASO data for {region}, other option are:")
+        for i, regions in enumerate(self.region_list, start=1):
+            print(f"{i}. {regions}")
         try:
-            user_input = int(input("Enter the index of the region: "))
-            if 1 <= user_input <= len(self.region_list):
-                selected_region = self.region_list[user_input - 1]
-                self.bounding_box = self.get_bounding_box(selected_region)
-                print(f"You selected: {selected_region}")
-                print(f"Bounding Box: {self.bounding_box}")
-            else:
-                print("Invalid index. Please select a valid index.")
+        #     user_input = int(input("Enter the index of the region: "))
+        #     if 1 <= user_input <= len(self.region_list):
+        #         selected_region = self.region_list[user_input - 1]
+            self.bounding_box = self.get_bounding_box(region)
+           # print(f"You selected: {selected_region}")
+            print(f"Bounding Box: {self.bounding_box}")
+            # else:
+            #     print("Invalid index. Please select a valid index.")
         except ValueError:
             print("Invalid input. Please enter a valid index.")
             
@@ -203,7 +202,7 @@ class ASODataProcessing:
                 print(f"Failed to open '{input_file}'. Make sure the file is a valid GeoTIFF file.")
                 return None
             
-            # Reproject and resample
+            # Reproject and resample, the Res # needs to be in degrees 0.00009 is equivalent to ~100 m
             Res = (1/output_res)*.1
             gdal.Warp(output_file, ds, dstSRS="EPSG:4326", xRes=Res, yRes=-Res, resampleAlg="bilinear")
     
@@ -219,7 +218,7 @@ class ASODataProcessing:
             return None
         
     @staticmethod
-    def convert_tiff_to_csv(input_folder, output_res):
+    def convert_tiff_to_csv(input_folder, output_res, region):
 
         #curr_dir = os.getcwd()
         dir = f"{HOME}/SWEML/data/NSMv2.0/data/ASO/"
@@ -249,7 +248,7 @@ class ASODataProcessing:
     
                 # Define the CSV filename and folder
                 csv_filename = f"ASO_{output_res}M_SWE_{date}.csv"
-                csv_folder = os.path.join(dir, f"{output_res}M_SWE_csv")
+                csv_folder = os.path.join(dir, f"{output_res}M_SWE_csv/{region}")
                 os.makedirs(csv_folder, exist_ok=True)
                 csv_filepath = os.path.join(csv_folder, csv_filename)
     
