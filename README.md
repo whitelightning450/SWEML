@@ -105,3 +105,8 @@ Python: Version 3.8 or later
 
 ## Project support through [CIROH](https://ciroh.ua.edu/)
 ![Alpine](./Images/CIROHsupport.png)
+
+
+## Saving environment
+
+ mamba env export -n SWEML_env > SWEML_env.yaml
