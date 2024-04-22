@@ -67,8 +67,6 @@ import NSIDC_Data
 To create .netrc file:
 import earthaccess
 earthaccess.login(persist=True)
-open file and change machine to https://urs.earthdata.nasa.gov
-
 '''
 
 #load access key
