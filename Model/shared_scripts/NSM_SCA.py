@@ -7,6 +7,7 @@ import sys
 sys.path.insert(0, '..')
 #from National_Snow_Model import SWE_Prediction
 from shared_scripts.National_Snow_Model import SWE_Prediction
+from shared_scripts.nsidc_fetch import download, format_date, format_boundingbox 
 import os
 # Dataframe Packages
 import numpy as np
@@ -24,7 +25,8 @@ import rasterstats as rs
 
 # Data Access Packages
 import earthaccess as ea
-from nsidc_fetch import download, format_date, format_boundingbox
+#from nsidc_fetch import download, format_date, format_boundingbox
+from shared_scripts.nsidc_fetch import download, format_date, format_boundingbox 
 import h5py
 import pickle
 import tensorflow as tf
@@ -33,6 +35,8 @@ from tensorflow.keras import layers
 from tensorflow.keras.models import load_model
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Activation, Dropout
+import base64
+import getpass
 
 # General Packages
 import re
@@ -49,6 +53,7 @@ from botocore import UNSIGNED
 from botocore.client import Config
 import os
 import zipfile
+import netrc
 
 warnings.filterwarnings("ignore")
 
@@ -69,9 +74,12 @@ BUCKET_NAME = 'national-snow-model'
 BUCKET = S3.Bucket(BUCKET_NAME)
 
 
+#load access key
+HOME = os.path.expanduser('~')
+
 class NSM_SCA(SWE_Prediction):
 
-    def __init__(self, date: Union[str, datetime], timeDelay=3, threshold=0.2, Regions = ['N_Sierras'], modelname = 'Neural_Network', frequency = 'Weekly', fSCA = False):
+    def __init__(self, date: Union[str, datetime], timeDelay=3, threshold=0.2, Regions = ['N_Sierras'], modelname = 'Neural_Network', frequency = 'Weekly', fSCA = False, NewSim = False):
         """
             Initializes the NSM_SCA class by calling the superclass constructor.
 
@@ -115,14 +123,23 @@ class NSM_SCA(SWE_Prediction):
             self.delta = 1
         
         #get data if folder does not exist
-        if os.path.exists(self.SCA_directory)== False:
-            print('Getting VIIRS fSCA files')
-            key = f"data/VIIRS/WY{self.year}.zip"            
-            S3.meta.client.download_file(BUCKET_NAME, key,f"{HOME}/SWEML/data/VIIRS/WY{self.year}.zip")
-            with zipfile.ZipFile(f"{HOME}/SWEML/data/VIIRS/WY{self.year}.zip", 'r') as Z:
-                for elem in Z.namelist() :
-                    Z.extract(elem, f"{HOME}/SWEML/data/VIIRS/WY{self.year}/")
-                #zip_ref.extractall(f"{HOME}/SWEML/data/VIIRS/WY{self.year}/")
+        if NewSim == True:
+            if os.path.exists(self.SCA_directory)== False:
+                #os.makedirs(f"{self.SCA_directory}{int(self.year)-1}-{self.year}NASA/", exist_ok=True)
+                print('Creating workflow for getting VIIRS fSCA files')
+                os.mkdir(self.SCA_directory)
+                os.mkdir(f"{self.SCA_directory}{int(self.year)-1}-{self.year}NASA/")
+
+
+        if NewSim == False:
+            if os.path.exists(self.SCA_directory)== False:
+                print('Getting VIIRS fSCA files')
+                key = f"data/VIIRS/WY{self.year}.zip"            
+                S3.meta.client.download_file(BUCKET_NAME, key,f"{HOME}/SWEML/data/VIIRS/WY{self.year}.zip")
+                with zipfile.ZipFile(f"{HOME}/SWEML/data/VIIRS/WY{self.year}.zip", 'r') as Z:
+                    for elem in Z.namelist() :
+                        Z.extract(elem, f"{HOME}/SWEML/data/VIIRS/WY{self.year}/")
+
         self.SCA_folder = f"{self.SCA_directory}{int(self.year)-1}-{self.year}NASA/"
         self.fSCA = fSCA
 
@@ -322,7 +339,7 @@ class NSM_SCA(SWE_Prediction):
                 pickle.dump(FutureForecast, fpath)
                 fpath.close()
                 
-        #if NewSim == True:
+        if NewSim == True:
                 #save forecast into pkl file
                 currentpath = f"./Predictions/Hold_Out_Year/{self.frequency}/fSCA_{fSCA}/Prediction_DF_SCA_{self.date}.pkl"
                 file = open(currentpath, "wb")
@@ -636,8 +653,8 @@ def fetchGranules(boundingBox: list[float, float, float, float],
         axis=1
     )  # add filepath if it exists, otherwise add empty string
     
-    #display(cells)
-    return cells
+    display(cells)
+    #return cells
     missingCells = cells[cells["filepath"] == ''][["h", "v"]].to_dict("records")
     attempts = 3  # how many times it will try and download the missing granules
     while shouldDownload and len(missingCells) > 0 and attempts > 0:
@@ -647,7 +664,8 @@ def fetchGranules(boundingBox: list[float, float, float, float],
         bbox = format_boundingbox(boundingBox)  # Format bounding box as "W,S,E,N"
         version = "2" if date > datetime(2018, 1, 1) else "1"  # Use version 1 if date is before 2018
         year = date.year if date.month >= 10 else date.year - 1  # Water years start on October 1st
-        download("VNP10A1F", version, temporal, bbox, dataFolder.joinpath(f"{year}-{year + 1}NASA"), mode="async")
+        #download("VNP10A1F", version, temporal, bbox, dataFolder.joinpath(f"{year}-{year + 1}NASA"), mode="async")
+        download("VNP10A1F", version, temporal, bbox, dataFolder, mode="async")
         cells["filepath"] = cells.apply(
             lambda x: granuleFilepath(createGranuleGlobpath(dataFolder, date, x['h'], x['v'])),
             axis=1

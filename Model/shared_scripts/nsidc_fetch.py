@@ -33,14 +33,18 @@ def get_credentials():
     """
     Get credentials from .netrc file
     """
+    print('getting credentials NSIDC')
+
     try:
         info = netrc.netrc()
         username, account, password = info.authenticators("urs.earthdata.nasa.gov")
+        print(username, password, account)
+    except:
         print('credentials not found, please enter them')
-    except Exception as e:
-        username = input("Earthdata Login Username: ")
-        password = getpass.getpass("Earthdata Login Password: ")
-        account = input("Earthdata Login Email: ")
+        # username = input("Earthdata Login Username in here: ")
+        # password = getpass.getpass("Earthdata Login Password in here: ")
+        # account = input("Earthdata Login Emailin here: ")
+
     return username, password, account
 
 def get_latest_version(short_name: str):
@@ -172,6 +176,7 @@ def download(short_name: str, version: str, temporal:str, bbox:str,
 
     # Get credentials
     username, password, account = get_credentials()
+
 
     # Get granules
     granules = discoverGranules(short_name, version, temporal, bbox)
@@ -343,20 +348,20 @@ def download(short_name: str, version: str, temporal:str, bbox:str,
     time.sleep(5)  # TODO investigate further, this is a hack to prevent the filesystem from not finding the moved files
 
 
-if __name__ == '__main__':
-    folder = "/Users/jmac/Documents/Programming/REU/National-Snow-Model/Data_Processing_Assimilation/download_test"
-    short_name = "VNP10A1F"
-    version = "2"
-    temporal = format_date(datetime(2019,1,1), datetime(2019,1,1,23,59,59))
-    boundingbox = "-123.34078531,33.35825379,-105.07803558,48.97106571" # CONUS
+# if __name__ == '__main__':
+#     folder = "/Users/jmac/Documents/Programming/REU/National-Snow-Model/Data_Processing_Assimilation/download_test"
+#     short_name = "VNP10A1F"
+#     version = "2"
+#     temporal = format_date(datetime(2019,1,1), datetime(2019,1,1,23,59,59))
+#     boundingbox = "-123.34078531,33.35825379,-105.07803558,48.97106571" # CONUS
 
-    print("Discovering...")
-    granules = discoverGranules(short_name, version, temporal, boundingbox)
+#     print("Discovering...")
+#     granules = discoverGranules(short_name, version, temporal, boundingbox)
 
-    print(granules)
-    print(len(granules))
-    print(getDownloadSize(granules))
+#     print(granules)
+#     print(len(granules))
+#     print(getDownloadSize(granules))
 
-    print("Downloading...")
-    download(short_name, version, temporal, boundingbox, folder, mode="async")
-    print("DONE!")
+#     print("Downloading...")
+#     download(short_name, version, temporal, boundingbox, folder, mode="async")
+#     print("DONE!")
