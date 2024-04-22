@@ -608,9 +608,7 @@ class SWE_Prediction():
         self.GM_Prev = self.GM_Prev.drop(columns=colrem)
 
         # All coordinates of 1 km polygon used to develop ave elevation, ave slope, ave aspect
-        #path = self.datapath + '/data/PreProcessed/RegionVal.pkl'  # TODO change to RegionVals?
         path = f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl"
-        #path = f"{HOME}/SWEML/data/PreProcessed/RegionVal.pkl"
         # load regionalized geospatial data
         self.RegionTest = open(path, "rb")
         self.RegionTest = pd.read_pickle(self.RegionTest)
@@ -619,9 +617,9 @@ class SWE_Prediction():
 
         #self.prev_SWE = {}
         if SCA == True:
-            path = f"Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_SCA_{self.prevdate}.pkl"
+            path = f"Predictions/Hold_Out_Year/{self.frequency}/fSCA_{SCA}/Prediction_DF_SCA_{self.prevdate}.pkl"
         if SCA == False:
-            path = f"Predictions/Hold_Out_Year/{self.frequency}/Prediction_DF_{self.prevdate}.pkl"
+            path = f"Predictions/Hold_Out_Year/{self.frequency}/fSCA_{SCA}/Prediction_DF_{self.prevdate}.pkl"
         
         self.prev_SWE = open(path, 'rb')
         self.prev_SWE = pd.read_pickle(self.prev_SWE)

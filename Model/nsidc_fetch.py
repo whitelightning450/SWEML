@@ -25,17 +25,20 @@ from typing import Union
 from datetime import datetime
 from pathlib import Path
 
+
+URS_URL = 'https://urs.earthdata.nasa.gov'
+
 def get_credentials():
     """
     Get credentials from .netrc file
     """
     try:
         info = netrc.netrc()
-        username, account, password = info.authenticators("urs.earthdata.nasa.gov")
+        username, account, password = info.authenticators(URS_URL)
     except Exception as e:
-        username = input("Earthdata Login Username: ")
-        password = getpass.getpass("Earthdata Login Password: ")
-        account = input("Earthdata Login Email: ")
+        username = input("Earthdata Login Username Wrong: ")
+        password = getpass.getpass("Earthdata Login Password Wrong: ")
+        account = input("Earthdata Login Email Wrong: ")
     return username, password, account
 
 def get_latest_version(short_name: str):

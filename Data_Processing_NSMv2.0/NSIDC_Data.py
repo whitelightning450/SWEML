@@ -44,7 +44,6 @@ polygon = ''
 filename_filter = ''
 url_list = [] """
 
-CMR_URL = 'https://cmr.earthdata.nasa.gov'
 URS_URL = 'https://urs.earthdata.nasa.gov'
 CMR_PAGE_SIZE = 2000
 CMR_FILE_URL = ('{0}/search/granules.json?provider=NSIDC_ECS'
@@ -53,19 +52,6 @@ CMR_FILE_URL = ('{0}/search/granules.json?provider=NSIDC_ECS'
 
 #load access key
 HOME = os.path.expanduser('~')
-
-def get_login_credentials():
-    try:
-        info = netrc.netrc()
-        username,none, password = info.authenticators(URS_URL)
-        credentials = f'{username}:{password}'
-        credentials = base64.b64encode(credentials.encode('ascii')).decode('ascii')
-    except Exception:
-        username = input("Earthdata Login Username: ")
-        password = getpass.getpass("Earthdata Login Password: ")
-        credentials = f'{username}:{password}'
-        credentials = base64.b64encode(credentials.encode('ascii')).decode('ascii')
-    return credentials
 
 def build_version_query_params(version):
     desired_pad_length = 3
