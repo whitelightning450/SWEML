@@ -44,7 +44,9 @@ polygon = ''
 filename_filter = ''
 url_list = [] """
 
-URS_URL = 'https://urs.earthdata.nasa.gov'
+#URS_URL = 'https://urs.earthdata.nasa.gov'
+URS_URL = 'urs.earthdata.nasa.gov'
+CMR_URL = 'https://cmr.earthdata.nasa.gov'
 CMR_PAGE_SIZE = 2000
 CMR_FILE_URL = ('{0}/search/granules.json?provider=NSIDC_ECS'
                 '&sort_key[]=start_date&sort_key[]=producer_granule_id'
@@ -52,6 +54,25 @@ CMR_FILE_URL = ('{0}/search/granules.json?provider=NSIDC_ECS'
 
 #load access key
 HOME = os.path.expanduser('~')
+
+def get_credentials():
+    """
+    Get credentials from .netrc file
+    """
+    print('getting credentials NSIDC')
+
+    try:
+        info = netrc.netrc()
+        username, account, password = info.authenticators("urs.earthdata.nasa.gov")
+        credentials = f'{username}:{password}'
+        credentials = base64.b64encode(credentials.encode('ascii')).decode('ascii')
+    except Exception:
+        username = input("Earthdata Login Username: ")
+        password = getpass.getpass("Earthdata Login Password: ")
+        credentials = f'{username}:{password}'
+        credentials = base64.b64encode(credentials.encode('ascii')).decode('ascii')
+    return credentials
+
 
 def build_version_query_params(version):
     desired_pad_length = 3
@@ -156,8 +177,7 @@ def cmr_download(urls, folder, quiet=False):
     if not quiet:
         print('Downloading {0} files to {1}...'.format(len(urls), folder))
 
-    credentials = get_login_credentials()
-    print(credentials)
+    credentials = get_credentials()
 
     for index, url in enumerate(urls, start=1):
         filename = os.path.join(folder, url.split('/')[-1])  # Specify the full path to the file
@@ -344,6 +364,3 @@ def main(argv=None):
         #cmr_download(url_list, force=force, quiet=quiet)
     except KeyboardInterrupt:
         quit()
-
-if __name__ == '__main__':
-    main()
