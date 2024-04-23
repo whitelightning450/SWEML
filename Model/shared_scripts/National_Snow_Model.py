@@ -412,58 +412,78 @@ class SWE_Prediction():
         # Daily SWE
         variablecode = 'SNOTEL:WTEQ_D'
 
-        values_df = None
-        try:
-            # Request data from the server
-            site_values = ulmo.cuahsi.wof.get_values(wsdlurl, sitecode, variablecode, start=start_date, end=end_date)
-            end_date = end_date.strftime('%Y-%m-%d')
-            # Convert to a Pandas DataFrame
-            SNOTEL_SWE = pd.DataFrame.from_dict(site_values['values'])
-            # Parse the datetime values to Pandas Timestamp objects
-            SNOTEL_SWE['datetime'] = pd.to_datetime(SNOTEL_SWE['datetime'], utc=True).values
-            SNOTEL_SWE.set_index('datetime', inplace = True)
-            # Convert values to float and replace -9999 nodata values with NaN
-            SNOTEL_SWE['value'] = pd.to_numeric(SNOTEL_SWE['value']).replace(-9999, np.nan)
-            # Remove any records flagged with lower quality
-            SNOTEL_SWE = SNOTEL_SWE[SNOTEL_SWE['quality_control_level_code'] == '1']
-            self.SWE_df[self.date].loc[sitecode] = SNOTEL_SWE['value'].values[0]
+        #values_df = None
+        # allows up to 3 attempts for getting site info, sometimes takes a few
+        attempts = 0
+        while attempts < 5:
+            if attempts > 1:
+                print(f"Attempt {attempts} for site {sitecode}")
+            try:
+                # Request data from the server
+                site_values = ulmo.cuahsi.wof.get_values(wsdlurl, sitecode, variablecode, start=start_date, end=end_date)
+                end_date = end_date.strftime('%Y-%m-%d')
+                # Convert to a Pandas DataFrame
+                SNOTEL_SWE = pd.DataFrame.from_dict(site_values['values'])
+                # Parse the datetime values to Pandas Timestamp objects
+                SNOTEL_SWE['datetime'] = pd.to_datetime(SNOTEL_SWE['datetime'], utc=True).values
+                SNOTEL_SWE.set_index('datetime', inplace = True)
+                # Convert values to float and replace -9999 nodata values with NaN
+                SNOTEL_SWE['value'] = pd.to_numeric(SNOTEL_SWE['value']).replace(-9999, np.nan)
+                # Remove any records flagged with lower quality
+                SNOTEL_SWE = SNOTEL_SWE[SNOTEL_SWE['quality_control_level_code'] == '1']
+                self.SWE_df[self.date].loc[sitecode] = SNOTEL_SWE['value'].values[0]
+                if attempts > 1:
+                    print(f"Attempt {attempts} successful for site {sitecode}")
+                break
 
-        except Exception as e:
-            self.SWE_df[self.date].loc[sitecode] = -9999
-            print(f"Snotel data fail, {sitecode}")
+            except Exception as e:
+                attempts += 1
+                self.SWE_df[self.date].loc[sitecode] = -9999
+                print(f"Snotel data fail, {sitecode}")
 
 
-    def get_CDEC_Threaded(self, station_id, sensor_id, resolution, start_date, end_date):
+    def get_CDEC_Threaded(self, station_id, sensor_id, resolution, start_date, end_date): #https://ulmo.readthedocs.io/en/latest/api.html ulmo now has CDEC sites
         
+        #values_df = None
+        # allows up to 3 attempts for getting site info, sometimes takes a few
+        attempts = 0
+        while attempts < 5:
+            if attempts > 1:
+                print(f"Attempt {attempts} for site {station_id}")
 
-        try:
-            url = 'https://cdec.water.ca.gov/dynamicapp/selectQuery?Stations=%s' % (station_id) + '&SensorNums=%s' % (
-                sensor_id) + '&dur_code=%s' % (resolution) + '&Start=%s' % (start_date) + '&End=%s' % (end_date)
-            CDEC_SWE = pd.read_html(url)[0]
-            if CDEC_SWE.columns[0] != 'DATE':
-                CDEC_SWE = pd.read_html(url)[1]
-            CDEC_station_id = 'CDEC:' + station_id
-            CDEC_SWE['station_id'] = CDEC_station_id
-            CDEC_SWE = CDEC_SWE.set_index('station_id')
-            CDEC_SWE = pd.DataFrame(CDEC_SWE.iloc[-1]).T
-            cols = CDEC_SWE.columns
-            CDEC_SWE.rename(columns={cols[1]: end_date}, inplace =  True)
-            if CDEC_SWE[end_date].values[0] =='--':
-                CDEC_SWE[end_date] = -999
-            self.SWE_df[self.date].loc[CDEC_station_id] = CDEC_SWE[end_date].values[0]
-            
+            try:
+                url = 'https://cdec.water.ca.gov/dynamicapp/selectQuery?Stations=%s' % (station_id) + '&SensorNums=%s' % (
+                    sensor_id) + '&dur_code=%s' % (resolution) + '&Start=%s' % (start_date) + '&End=%s' % (end_date)
+                CDEC_SWE = pd.read_html(url)[0]
+                if CDEC_SWE.columns[0] != 'DATE':
+                    CDEC_SWE = pd.read_html(url)[1]
+                CDEC_station_id = 'CDEC:' + station_id
+                CDEC_SWE['station_id'] = CDEC_station_id
+                CDEC_SWE = CDEC_SWE.set_index('station_id')
+                CDEC_SWE = pd.DataFrame(CDEC_SWE.iloc[-1]).T
+                cols = CDEC_SWE.columns
+                CDEC_SWE.rename(columns={cols[1]: end_date}, inplace =  True)
+                if CDEC_SWE[end_date].values[0] =='--':
+                    CDEC_SWE[end_date] = -999
+                self.SWE_df[self.date].loc[CDEC_station_id] = CDEC_SWE[end_date].values[0]
 
-        except:
-            url = 'https://cdec.water.ca.gov/dynamicapp/selectQuery?Stations=%s' % (station_id) + '&SensorNums=%s' % (
-                sensor_id) + '&dur_code=%s' % (resolution) + '&Start=%s' % (start_date) + '&End=%s' % (end_date)
-            # print('Unable to fetch SWE data for site ', station_id, 'SWE value: -9999')
-            CDEC_SWE = pd.DataFrame(-9999, columns=['station_id', end_date], index=[1])
-            CDEC_station_id = 'CDEC:' + station_id
-            CDEC_SWE['station_id'] = CDEC_station_id
-            CDEC_SWE = CDEC_SWE.set_index('station_id')
-            self.SWE_df[self.date].loc[CDEC_station_id] = CDEC_SWE[end_date]
-            #self.CDEC[f"{station_id}-fail"] = CDEC_SWE
-            print(f"CDEC data fail, {url}")
+                if attempts > 1:
+                    print(f"Attempt {attempts} successful for site {station_id}")
+                break
+                
+
+            except:
+                attempts += 1
+                url = 'https://cdec.water.ca.gov/dynamicapp/selectQuery?Stations=%s' % (station_id) + '&SensorNums=%s' % (
+                    sensor_id) + '&dur_code=%s' % (resolution) + '&Start=%s' % (start_date) + '&End=%s' % (end_date)
+                # print('Unable to fetch SWE data for site ', station_id, 'SWE value: -9999')
+                CDEC_SWE = pd.DataFrame(-9999, columns=['station_id', end_date], index=[1])
+                CDEC_station_id = 'CDEC:' + station_id
+                CDEC_SWE['station_id'] = CDEC_station_id
+                CDEC_SWE = CDEC_SWE.set_index('station_id')
+                self.SWE_df[self.date].loc[CDEC_station_id] = CDEC_SWE[end_date]
+                #self.CDEC[f"{station_id}-fail"] = CDEC_SWE
+                print(f"CDEC data fail, {url}")
 
     def Get_Monitoring_Data_Threaded(self, getdata = False):
         if getdata == False:
@@ -471,16 +491,16 @@ class SWE_Prediction():
         
         if getdata ==True:
             try:
-                GM_template = pd.read_csv(f"Predictions/Hold_Out_Year/{self.frequency}/ground_measures_features_template.csv")
+                GM_template = pd.read_csv(f"Predictions/Hold_Out_Year/{self.frequency}/ground_measures_metadata.csv")
             except:
-                key = f"data/PreProcessed/ground_measures_features_template.csv"
-                S3.meta.client.download_file(BUCKET_NAME, key,f"Predictions/Hold_Out_Year/{self.frequency}/ground_measures_features_template.csv")
-                GM_template = pd.read_csv(f"Predictions/Hold_Out_Year/{self.frequency}/ground_measures_features_template.csv")
-                  
-                  
+                key = f"data/PreProcessed/ground_measures_metadata.csv"
+                S3.meta.client.download_file(BUCKET_NAME, key,f"Predictions/Hold_Out_Year/{self.frequency}/ground_measures_metadata.csv")
+                GM_template = pd.read_csv(f"Predictions/Hold_Out_Year/{self.frequency}/ground_measures_metadata.csv")
+
             GM_template = GM_template.rename(columns={'Unnamed: 0': 'station_id'})
             GM_template.index = GM_template['station_id']
             cols = ['Date']
+            GM_template['Date'] = np.NaN
             GM_template = GM_template[cols]
 
             # Get all records, can filter later,
@@ -507,12 +527,12 @@ class SWE_Prediction():
                                        columns=['station_id', date.strftime('%Y-%m-%d')])
             self.SWE_df = self.SWE_df.set_index('station_id')
 
-            print('Getting California Data Exchange Center SWE data from sites: ')
+            print('Getting California Data Exchange Center SWE data from sites')
             threads = []  # create list to store thread references
 
             # create new threads and append them to the list of threads
             for site in self.CDECsites:
-                # print(site)
+                #print(site)
                 # functions with arguments must have an 'empty' arg at the end of the passed 'args' tuple
                 t = threading.Thread(target=self.get_CDEC_Threaded,
                                      args=(site, sensor_id, resolution, start_date, date.strftime('%Y-%m-%d')))
@@ -526,12 +546,12 @@ class SWE_Prediction():
             for t in threads:
                 t.join()
 
-            print('Getting NRCS SNOTEL SWE data from sites: ')
+            print('Getting NRCS SNOTEL SWE data from sites')
             threads = []  # create list to store thread references
 
             # create new threads and append them to the list of threads
             for site in self.Snotelsites:
-                # print(site)
+                #print(site)
                 # functions with arguments must have an 'empty' arg at the end of the passed 'args' tuple
                 t = threading.Thread(target=self.get_SNOTEL_Threaded, args=(site, start_date, date))
                 threads.append(t)
@@ -601,8 +621,7 @@ class SWE_Prediction():
         #self.GM_Prev = pd.read_csv(obs_path)
 
         obs_path = f"{HOME}/SWEML/data/PreProcessed/DA_ground_measures_features.h5"
-        self.GM_Prev = pd.read_hdf(obs_path, key = self.prevdate)          
-        
+        self.GM_Prev = pd.read_hdf(obs_path, key = self.prevdate)        
         
         colrem = ['Region', 'Prev_SWE', 'Delta_SWE']
         self.GM_Prev = self.GM_Prev.drop(columns=colrem)
@@ -656,15 +675,22 @@ class SWE_Prediction():
 
         # merge testing ground truth location metadata with snotel data
         self.GM_Test = self.GM_Meta.merge(self.GM_Test, how='inner', on='station_id')
-        self.GM_Test = self.GM_Test.set_index('station_id')
-        self.GM_Prev = self.GM_Prev.set_index('station_id')
+        self.GM_Test.set_index('station_id', inplace = True)
+        self.GM_Prev.set_index('station_id',  inplace = True)
 
         self.GM_Test.rename(columns={'name': 'location', 'latitude': 'Lat', 'longitude': 'Long', 'value': 'SWE'},
                             inplace=True)
 
         # drop NA columns from initial observations
-        prev_index = self.GM_Prev.index
-        self.GM_Test = self.GM_Test.loc[prev_index]
+        try:
+            prev_index = self.GM_Prev.index
+            self.GM_Test = self.GM_Test.loc[prev_index]
+        except:
+            #remove decomissioned sites
+            print('Removing decomissioned sites...')
+            self.GM_Prev.drop(['SNOTEL:1133_WY_SNTL', 'SNOTEL:305_CO_SNTL'], inplace =True)   
+            prev_index = self.GM_Prev.index
+            self.GM_Test = self.GM_Test.loc[prev_index]
 
         # Make a dictionary for current snotel observations
         self.Snotel = self.GM_Test.copy()
