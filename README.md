@@ -1,11 +1,11 @@
-![NSM_Cover](./Images/ML_SWE.jpg)
+![NSM_Cover](https://github.com/whitelightning450/SWEML/blob/main/Images/ML_SWE.jpg)
 
 # Snow Water Equivalent Machine Learning (SWEML): Using Machine Learning to Advance Snow State Modeling
 
 [![Deploy](https://github.com/geo-smart/use_case_template/actions/workflows/deploy.yaml/badge.svg)](https://github.com/geo-smart/use_case_template/actions/workflows/deploy.yaml)
 [![Jupyter Book Badge](https://jupyterbook.org/badge.svg)](https://geo-smart.github.io/use_case_template)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/geo-smart/use_case_template/HEAD?urlpath=lab)
-[![GeoSMART Use Case](./book/img/use_case_badge.svg)](https://geo-smart.github.io/usecases)
+[![GeoSMART Use Case](https://github.com/whitelightning450/SWEML/blob/main/book/img/use_case_badge.svg)](https://geo-smart.github.io/usecases)
 ![GitHub](https://img.shields.io/github/license/whitelightning450/National-ML-Snow-Prediction-Mod?logo=GitHub&style=flat-square)
 ![GitHub top language](https://img.shields.io/github/languages/top/whitelightning450/National-ML-Snow-Prediction-Mod?logo=Jupyter&style=flat-square)
 ![GitHub repo size](https://img.shields.io/github/repo-size/whitelightning450/National-ML-Snow-Prediction-Mod?logo=Github&style=flat-square)
@@ -17,7 +17,7 @@ The NSM pipeline assimilates nearly 700 snow telemetry (SNOTEL) and California D
 The ML pipeline retrieves all SWE observations from SNOTEL and CDEC snow monitoring locations for the date of interest and processes the SWE observations into a model-friendly data frame alongside lidar-derived terrain features, seasonality metrics, previous SWE estimates, and location.
 SWEML predicts SWE using a uniquely trained multilayered perceptron network model for each region and supports an interactive visualization of the SWE estimates across the western U.S. 
 
-![SWEinteractive](./Images/SWE_2019.gif)
+![SWEinteractive](https://github.com/whitelightning450/SWEML/blob/main/Images/SWE_2019.gif)
 Figure 1. Example hindcast simulation in the Colorado domain demonstrates snow accumulation as the season progresses, especially at higher elevations, and only predicts SWE where NASA VIIRS fSCA imagery indicates snow covering greater than 20% of the terrain.
 
 
@@ -31,17 +31,17 @@ General model development used the remaining 25% of the observations to test the
 A hindcast simulation prevents any data leakage from the training data, supports a robust investigation of the expected performance of SWEML in operations, and demonstrates a framework for performing retrospective simulations.
 The below figures represent the results of the hindcast from the 2019 simulation.
 
-![Perf](./Images/Parity_Plot_All4_Hindcast.png)
+![Perf](https://github.com/whitelightning450/SWEML/blob/main/Images/Parity_Plot_All4_Hindcast.png)
 Figure 2. SWEML estimates for three key snow classification types closely match the observed.
 
-![TablePerf](./Images/ModelPerfTable.JPG)
+![TablePerf](https://github.com/whitelightning450/SWEML/blob/main/Images/ModelPerfTable.JPG)
 Table 1. SWEML produces high model skill for all regions
 
 
-![Alpine](./Images/Alpine.png)
+![Alpine](https://github.com/whitelightning450/SWEML/blob/main/Images/Alpine.png)
 Figure 3. Regional average SWE estimates closely match the  magnitude and timing (e.g., peak SWE, melt) of observations.
 
-![Error](./Images/ErrorVsElevation3_Hindcast.png)
+![Error](https://github.com/whitelightning450/SWEML/blob/main/Images/ErrorVsElevation3_Hindcast.png)
 Figure 4. The error in SWE estimates for the three snow classification types vs. elevation.
 
 
@@ -65,16 +65,16 @@ Aspect and slope angle from the geoJSON data for each grid cell was converted to
 This use case library contains a summary of the motivation behind the project, applicable ML methods and tools, the methods for data preparation, model development including the model training framework and evaluation, workflow management demonstrated using GeoWeaver, links to the complete model on GitHub as the model is data-intensive the tutorial is for a subset of the entire model, a discussion/conclusion, and a solicitation to questions.
 Below are the respective chapters addressing these items:
 
-1. [Motivation](./book/chapters/motivation.ipynb)
-2. [Machine Learning Methods and tools](./book/chapters/methods.ipynb)
-3. [Data Preparation](./book/chapters/data.ipynb)
-4. [Model Development and Parameter Tuning](./book/chapters/development.ipynb)
-5. [Model Training](./book/chapters/training.ipynb)
-6. [Evaluation of Model Performance](./book/chapters/evaluation.ipynb)
-7. [Workflow Management and Cloud Computing](./book/chapters/workflow.ipynb)
-8. [Reproducibility](./book/chapters/reproducibility.ipynb)
-9. [Discussion/Conclusion](./book/chapters/conclusion.ipynb)
-10. [Solicitation to Questions](./book/chapters/questions.ipynb)
+1. [Motivation](https://github.com/whitelightning450/SWEML/blob/main/book/chapters/motivation.ipynb)
+2. [Machine Learning Methods and tools](https://github.com/whitelightning450/SWEML/blob/main/book/chapters/methods.ipynb)
+3. [Data Preparation](https://github.com/whitelightning450/SWEML/blob/main/book/chapters/data.ipynb)
+4. [Model Development and Parameter Tuning](https://github.com/whitelightning450/SWEML/blob/main/book/chapters/development.ipynb)
+5. [Model Training](https://github.com/whitelightning450/SWEML/blob/main/book/chapters/training.ipynb)
+6. [Evaluation of Model Performance](https://github.com/whitelightning450/SWEML/blob/main/book/chapters/evaluation.ipynb)
+7. [Workflow Management and Cloud Computing](https://github.com/whitelightning450/SWEML/blob/main/book/chapters/workflow.ipynb)
+8. [Reproducibility](https://github.com/whitelightning450/SWEML/blob/main/book/chapters/reproducibility.ipynb)
+9. [Discussion/Conclusion](https://github.com/whitelightning450/SWEML/blob/main/book/chapters/conclusion.ipynb)
+10. [Solicitation to Questions](https://github.com/whitelightning450/SWEML/blob/main/book/chapters/questions.ipynb)
 
 
 ## Dependencies (versions, environments)
@@ -104,7 +104,7 @@ Python: Version 3.8 or later
 
 
 ## Project support through [CIROH](https://ciroh.ua.edu/)
-![Alpine](./Images/CIROHsupport.png)
+![Alpine](https://github.com/whitelightning450/SWEML/blob/main/Images/CIROHsupport.png)
 
 
 ## Saving environment
