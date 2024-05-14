@@ -27,7 +27,6 @@ def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, si
         datelist = Hindcast_Initialization.Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list,
                                                                frequency, fSCA=fSCA)
 
-    print(datelist)
     # Run data processing script to partition key regional dataframes
     # note, need to load RegionTrain_SCA.h5,
     if datelist[0][-5:] == '10-01':
