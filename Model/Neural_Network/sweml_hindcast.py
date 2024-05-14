@@ -5,6 +5,7 @@ import sys
 sys.path.insert(0, '..')
 from shared_scripts import DataProcess, Hindcast_Initialization, NSM_SCA
 import warnings
+import datetime
 
 warnings.filterwarnings('ignore')
 
@@ -13,12 +14,20 @@ cwd = os.getcwd()
 datapath = f"{os.path.expanduser('~')}/SWEML"
 
 
-def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim):
+def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, single_day):
     model = 'Neural_Network'
 
-    datelist = Hindcast_Initialization.Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list,
+    if single_day:
+        dt = datetime.datetime.now() - datetime.timedelta(days=4)
+        datelist = [dt.strftime('%Y-%m-%d')]
+        if datelist[0][-5:] == '10-01':
+            Hindcast_Initialization.Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list,
+                                                            frequency, fSCA=fSCA)
+    else:
+        datelist = Hindcast_Initialization.Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list,
                                                                frequency, fSCA=fSCA)
 
+    print(datelist)
     # Run data processing script to partition key regional dataframes
     # note, need to load RegionTrain_SCA.h5,
     if datelist[0][-5:] == '10-01':
@@ -77,5 +86,6 @@ if __name__ == "__main__":
     fSCA = True
     frequency = 'Daily'
     NewSim = True
+    single_day = True
 
-    sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim)
+    sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, single_day)
