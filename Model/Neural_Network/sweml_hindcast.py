@@ -70,8 +70,9 @@ def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, si
     modelname = 'Neural_Network'
     folderpath = 'Predictions/Hold_Out_Year/Daily/fSCA_True/'
     AWSpath = f"Hold_Out_Year/Daily/"
-    file_type = '.h5'
-    Hindcast_Initialization.Hindcast_to_AWS(modelname, folderpath, AWSpath, file_type)
+    file_types = ['.h5', '.pkl']
+    for file_type in file_types:
+        Hindcast_Initialization.Hindcast_to_AWS(modelname, folderpath, AWSpath, file_type)
 
 
 if __name__ == "__main__":
