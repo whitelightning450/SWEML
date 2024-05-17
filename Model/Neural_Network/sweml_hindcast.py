@@ -5,6 +5,7 @@ import sys
 sys.path.insert(0, '..')
 from shared_scripts import DataProcess, Hindcast_Initialization, NSM_SCA
 import warnings
+import datetime
 
 warnings.filterwarnings('ignore')
 
@@ -13,10 +14,17 @@ cwd = os.getcwd()
 datapath = f"{os.path.expanduser('~')}/SWEML"
 
 
-def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim):
+def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, single_day):
     model = 'Neural_Network'
 
-    datelist = Hindcast_Initialization.Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list,
+    if single_day:
+        dt = datetime.datetime.now() - datetime.timedelta(days=4)
+        datelist = [dt.strftime('%Y-%m-%d')]
+        if datelist[0][-5:] == '10-01':
+            Hindcast_Initialization.Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list,
+                                                            frequency, fSCA=fSCA)
+    else:
+        datelist = Hindcast_Initialization.Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list,
                                                                frequency, fSCA=fSCA)
 
     # Run data processing script to partition key regional dataframes
@@ -61,8 +69,9 @@ def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim):
     modelname = 'Neural_Network'
     folderpath = 'Predictions/Hold_Out_Year/Daily/fSCA_True/'
     AWSpath = f"Hold_Out_Year/Daily/"
-    file_type = '.h5'
-    Hindcast_Initialization.Hindcast_to_AWS(modelname, folderpath, AWSpath, file_type)
+    file_types = ['.h5', '.pkl']
+    for file_type in file_types:
+        Hindcast_Initialization.Hindcast_to_AWS(modelname, folderpath, AWSpath, file_type)
 
 
 if __name__ == "__main__":
@@ -77,5 +86,6 @@ if __name__ == "__main__":
     fSCA = True
     frequency = 'Daily'
     NewSim = True
+    single_day = True
 
-    sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim)
+    sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, single_day)
