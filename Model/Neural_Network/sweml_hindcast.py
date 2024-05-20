@@ -2,6 +2,7 @@ import os
 from tqdm import tqdm
 import MLP_Model
 import sys
+
 sys.path.insert(0, '..')
 from shared_scripts import DataProcess, Hindcast_Initialization, NSM_SCA
 import warnings
@@ -17,15 +18,26 @@ datapath = f"{os.path.expanduser('~')}/SWEML"
 def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, single_day):
     model = 'Neural_Network'
 
+    retries = 0
     if single_day:
-        dt = datetime.datetime.now() - datetime.timedelta(days=4)
-        datelist = [dt.strftime('%Y-%m-%d')]
+        prev_data_flag = True
+        days = 4
+        while prev_data_flag and retries < 60:
+            dt = datetime.datetime.now() - datetime.timedelta(days=days)
+            prev_dt = dt - datetime.timedelta(days=1)
+            datelist = [dt.strftime('%Y-%m-%d')]
+            if os.path.isfile(f"Predictions/Hold_Out_Year/Daily/fSCA_True/Prediction_DF_SCA_{prev_dt.strftime('%Y-%m-%d')}.pkl"):
+                prev_data_flag = False
+            else:
+                days += 1
+                retries += 1
+
         if datelist[0][-5:] == '10-01':
             Hindcast_Initialization.Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list,
                                                             frequency, fSCA=fSCA)
     else:
         datelist = Hindcast_Initialization.Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list,
-                                                               frequency, fSCA=fSCA)
+                                                                   frequency, fSCA=fSCA)
 
     # Run data processing script to partition key regional dataframes
     # note, need to load RegionTrain_SCA.h5,
@@ -72,6 +84,9 @@ def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, si
     file_types = ['.h5', '.pkl']
     for file_type in file_types:
         Hindcast_Initialization.Hindcast_to_AWS(modelname, folderpath, AWSpath, file_type)
+
+    if retries > 0:
+        sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, single_day)
 
 
 if __name__ == "__main__":
