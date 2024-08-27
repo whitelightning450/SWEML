@@ -77,7 +77,9 @@ def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, si
         # Make predictions, set NewSim to False Look to multiprocess, each region can do a prediction to speed things
         # up. set NewSim to true for New simulation, turn to false once all data has been proces and saved.
         snow.SWE_Predict(NewSim=NewSim, Corrections=False, fSCA=fSCA)
-
+        snow.netCDF_compressed(plot=False)
+        snow.Geo_df()
+    
     modelname = 'Neural_Network'
     folderpath = 'Predictions/Hold_Out_Year/Daily/fSCA_True/'
     AWSpath = f"Hold_Out_Year/Daily/"
