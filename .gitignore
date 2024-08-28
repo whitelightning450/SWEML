@@ -19,3 +19,5 @@ Data/WBD/
 *.zip
 *.ipynb_checkpoints/
 *.nfs*
+*.geojson
+*.nc
