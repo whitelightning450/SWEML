@@ -58,6 +58,7 @@ import os
 from osgeo import gdal, osr
 from matplotlib.dates import date2num
 from rasterio.crs import CRS
+import csv
 
 # import contextily as ctx
 import ulmo
@@ -1581,6 +1582,14 @@ class SWE_Prediction():
         self.SWE_gdf.crs = CRS.from_epsg(4326)
         file = f"{HOME}/SWEML/Data/GeoJSON/SWE_{self.date}.geojson"
         SWE_gdf.to_file(file, driver='GeoJSON')
+        for index, row in SWE_gdf.iterrows():
+            csv_file = f"{HOME}/SWEML/Data/csv/swe_geoid_{row['geoid']}.csv"
+            file_exists = os.path.isfile(csv_file)
+            with open(csv_file, 'a') as f:
+                writer = csv.writer(f)
+                if not file_exists:
+                    writer.writerow(['time', 'SWE'])
+                writer.writerow([self.date, row['SWE']])
         xrConus.close()
 
     # produce an interactive plot using Folium
