@@ -29,7 +29,7 @@ import rasterio
 import geopandas as gpd
 from shapely.geometry import Point
 import xarray as xr
-#import netCDF4 as nc
+import netCDF4 as nc
 # from mpl_toolkits.basemap import Basemap
 from matplotlib.colors import LinearSegmentedColormap
 import folium
@@ -55,6 +55,9 @@ import boto3
 from botocore import UNSIGNED
 from botocore.client import Config
 import os
+from osgeo import gdal, osr
+from matplotlib.dates import date2num
+from rasterio.crs import CRS
 
 # import contextily as ctx
 import ulmo
@@ -1281,7 +1284,8 @@ class SWE_Prediction():
         self.SWE_array = self.DFG['SWE'].values.reshape(1, len(self.latrange), len(self.lonrange))
 
         # create nc filepath
-        fn = self.cwd + '/Data/NetCDF/SWE_' + self.date + '_compressed.nc'
+        #fn = self.cwd + '/Data/NetCDF/SWE_' + self.date + '_compressed.nc'
+        fn = f"{HOME}/SWEML/Data/NetCDF/SWE_{self.date}_compressed.nc"
 
         # make nc file, set lat/long, time
         ncfile = nc.Dataset(fn, 'w', format='NETCDF4')
@@ -1338,7 +1342,8 @@ class SWE_Prediction():
         # Set date/time information
         times_arr = time[:]
         dates = [dt.datetime(int(self.date[0:4]), int(self.date[5:7]), int(self.date[8:]), 0)]
-        times = date2num(dates, time.units)
+        #times = date2num(dates, time.units)
+        times = date2num(dates)
         time[:] = times
 
         print(ncfile)
@@ -1548,8 +1553,8 @@ class SWE_Prediction():
 
     def Geo_df(self):
         print('loading file')
-        fnConus = self.cwd + '/Data/NetCDF/SWE_' + self.date + '_compressed.nc'
-
+        #fnConus = self.cwd + '/Data/NetCDF/SWE_' + self.date + '_compressed.nc'
+        fnConus = f"{HOME}/SWEML/Data/NetCDF/SWE_{self.date}_compressed.nc"
         # requires the netCDF4 package rather than rioxarray
         xrConus = nc.Dataset(fnConus)
 
@@ -1574,7 +1579,8 @@ class SWE_Prediction():
         Chorocols = ['geoid', 'SWE', 'geometry']
         self.SWE_gdf = SWE_gdf[Chorocols]
         self.SWE_gdf.crs = CRS.from_epsg(4326)
-
+        file = f"{HOME}/SWEML/Data/GeoJSON/SWE_{self.date}.geojson"
+        SWE_gdf.to_file(file, driver='GeoJSON')
         xrConus.close()
 
     # produce an interactive plot using Folium
