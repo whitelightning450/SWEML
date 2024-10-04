@@ -81,11 +81,17 @@ def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, si
         snow.Geo_df()
     
     modelname = 'Neural_Network'
-    folderpath = 'Predictions/Hold_Out_Year/Daily/fSCA_True/'
-    AWSpath = f"Hold_Out_Year/Daily/"
-    file_types = ['.h5', '.pkl']
+    folderpath = ['Predictions/Hold_Out_Year/Daily/fSCA_True/', f'{HOME}/data/csv', f'{HOME}/data/GeoJSON']
+    AWSpath = [f"Hold_Out_Year/Daily/", f"Hold_Out_Year/Daily/csv", f"Hold_Out_Year/Daily/GeoJSON"]
+    file_types = ['.h5', '.pkl', '.csv', '.geojson']
     for file_type in file_types:
-        Hindcast_Initialization.Hindcast_to_AWS(modelname, folderpath, AWSpath, file_type)
+        if file_type == '.h5' or '.pkl':
+            index = 0
+        elif file_type == '.csv':
+            index = 1
+        else:
+            index = 2
+        Hindcast_Initialization.Hindcast_to_AWS(modelname, folderpath[index], AWSpath[index], file_type)
 
     if retries > 0:
         sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, single_day)
