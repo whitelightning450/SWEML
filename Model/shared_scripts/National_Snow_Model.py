@@ -1286,7 +1286,7 @@ class SWE_Prediction():
 
         # create nc filepath
         #fn = self.cwd + '/Data/NetCDF/SWE_' + self.date + '_compressed.nc'
-        fn = f"{HOME}/SWEML/Data/NetCDF/SWE_{self.date}_compressed.nc"
+        fn = f"{HOME}/SWEML/data/NetCDF/SWE_{self.date}_compressed.nc"
 
         # make nc file, set lat/long, time
         ncfile = nc.Dataset(fn, 'w', format='NETCDF4')
@@ -1555,7 +1555,7 @@ class SWE_Prediction():
     def Geo_df(self):
         print('loading file')
         #fnConus = self.cwd + '/Data/NetCDF/SWE_' + self.date + '_compressed.nc'
-        fnConus = f"{HOME}/SWEML/Data/NetCDF/SWE_{self.date}_compressed.nc"
+        fnConus = f"{HOME}/SWEML/data/NetCDF/SWE_{self.date}_compressed.nc"
         # requires the netCDF4 package rather than rioxarray
         xrConus = nc.Dataset(fnConus)
 
