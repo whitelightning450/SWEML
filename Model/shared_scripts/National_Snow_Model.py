@@ -1583,7 +1583,7 @@ class SWE_Prediction():
         file = f"{HOME}/SWEML/data/GeoJSON/SWE_{self.date}.geojson"
         SWE_gdf.to_file(file, driver='GeoJSON')
         for index, row in SWE_gdf.iterrows():
-            csv_file = f"{HOME}/SWEML/Data/csv/swe_1000m_{row['y']:.3f}_{row['x']:.3f}.csv"
+            csv_file = f"{HOME}/SWEML/data/csv/swe_1000m_{row['y']:.3f}_{row['x']:.3f}.csv"
             file_exists = os.path.isfile(csv_file)
             with open(csv_file, 'a') as f:
                 writer = csv.writer(f)
