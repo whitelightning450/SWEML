@@ -1580,7 +1580,7 @@ class SWE_Prediction():
         Chorocols = ['geoid', 'SWE', 'geometry']
         self.SWE_gdf = SWE_gdf[Chorocols]
         self.SWE_gdf.crs = CRS.from_epsg(4326)
-        file = f"{HOME}/SWEML/Data/GeoJSON/SWE_{self.date}.geojson"
+        file = f"{HOME}/SWEML/data/GeoJSON/SWE_{self.date}.geojson"
         SWE_gdf.to_file(file, driver='GeoJSON')
         for index, row in SWE_gdf.iterrows():
             csv_file = f"{HOME}/SWEML/Data/csv/swe_1000m_{row['y']:.3f}_{row['x']:.3f}.csv"
