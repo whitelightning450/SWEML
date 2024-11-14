@@ -1569,6 +1569,7 @@ class SWE_Prediction():
         SWE_pd = pd.DataFrame.from_dict({'SWE': SWE, 'x': x, 'y': y})
         SWE_threshold = 0.1
         SWE_pd = SWE_pd[SWE_pd['SWE'] > SWE_threshold]
+        SWE_pd['SWE'] = SWE_pd['SWE'].round(2)
         SWE_gdf = gpd.GeoDataFrame(
             SWE_pd, geometry=gpd.points_from_xy(SWE_pd.x, SWE_pd.y), crs=4326)
 
