@@ -58,6 +58,7 @@ import os
 from osgeo import gdal, osr
 from matplotlib.dates import date2num
 from rasterio.crs import CRS
+import csv
 
 # import contextily as ctx
 import ulmo
@@ -1285,7 +1286,7 @@ class SWE_Prediction():
 
         # create nc filepath
         #fn = self.cwd + '/Data/NetCDF/SWE_' + self.date + '_compressed.nc'
-        fn = f"{HOME}/SWEML/Data/NetCDF/SWE_{self.date}_compressed.nc"
+        fn = f"{HOME}/SWEML/data/NetCDF/SWE_{self.date}_compressed.nc"
 
         # make nc file, set lat/long, time
         ncfile = nc.Dataset(fn, 'w', format='NETCDF4')
@@ -1554,7 +1555,7 @@ class SWE_Prediction():
     def Geo_df(self):
         print('loading file')
         #fnConus = self.cwd + '/Data/NetCDF/SWE_' + self.date + '_compressed.nc'
-        fnConus = f"{HOME}/SWEML/Data/NetCDF/SWE_{self.date}_compressed.nc"
+        fnConus = f"{HOME}/SWEML/data/NetCDF/SWE_{self.date}_compressed.nc"
         # requires the netCDF4 package rather than rioxarray
         xrConus = nc.Dataset(fnConus)
 
@@ -1568,6 +1569,7 @@ class SWE_Prediction():
         SWE_pd = pd.DataFrame.from_dict({'SWE': SWE, 'x': x, 'y': y})
         SWE_threshold = 0.1
         SWE_pd = SWE_pd[SWE_pd['SWE'] > SWE_threshold]
+        SWE_pd['SWE'] = SWE_pd['SWE'].round(2)
         SWE_gdf = gpd.GeoDataFrame(
             SWE_pd, geometry=gpd.points_from_xy(SWE_pd.x, SWE_pd.y), crs=4326)
 
@@ -1579,8 +1581,16 @@ class SWE_Prediction():
         Chorocols = ['geoid', 'SWE', 'geometry']
         self.SWE_gdf = SWE_gdf[Chorocols]
         self.SWE_gdf.crs = CRS.from_epsg(4326)
-        file = f"{HOME}/SWEML/Data/GeoJSON/SWE_{self.date}.geojson"
+        file = f"{HOME}/SWEML/data/GeoJSON/SWE_{self.date}.geojson"
         SWE_gdf.to_file(file, driver='GeoJSON')
+        for index, row in SWE_gdf.iterrows():
+            csv_file = f"{HOME}/SWEML/data/csv/swe_1000m_{row['y']:.3f}_{row['x']:.3f}.csv"
+            file_exists = os.path.isfile(csv_file)
+            with open(csv_file, 'a') as f:
+                writer = csv.writer(f)
+                if not file_exists:
+                    writer.writerow(['date', 'SWE'])
+                writer.writerow([self.date, row['SWE']])
         xrConus.close()
 
     # produce an interactive plot using Folium

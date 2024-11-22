@@ -17,7 +17,7 @@ datapath = f"{os.path.expanduser('~')}/SWEML"
 
 def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, single_day):
     model = 'Neural_Network'
-
+    
     retries = 0
     if single_day:
         prev_data_flag = True
@@ -38,13 +38,14 @@ def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, si
     else:
         datelist = Hindcast_Initialization.Hindcast_Initialization(cwd, datapath, new_year, threshold, Region_list,
                                                                    frequency, fSCA=fSCA)
-
+    
+    
     # Run data processing script to partition key regional dataframes
     # note, need to load RegionTrain_SCA.h5,
     if datelist[0][-5:] == '10-01':
         RegionTrain, RegionTest, RegionObs_Train, RegionObs_Test, RegionTest_notScaled = DataProcess.DataProcess(
             new_year, frequency, model, Region_list, fSCA=fSCA)
-
+        
         """
         # model training, each participants model will be different but should follow the prescribed input feature 
         template epochs= 30 
@@ -79,13 +80,20 @@ def sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, si
         snow.SWE_Predict(NewSim=NewSim, Corrections=False, fSCA=fSCA)
         snow.netCDF_compressed(plot=False)
         snow.Geo_df()
-    
+
     modelname = 'Neural_Network'
-    folderpath = 'Predictions/Hold_Out_Year/Daily/fSCA_True/'
-    AWSpath = f"Hold_Out_Year/Daily/"
-    file_types = ['.h5', '.pkl']
+    folderpath = ['Predictions/Hold_Out_Year/Daily/fSCA_True/', f'{datapath}/data/csv/', f'{datapath}/data/GeoJSON/']
+    AWSpath = [f"Hold_Out_Year/Daily/", f"Hold_Out_Year/Daily/csv/", f"Hold_Out_Year/Daily/GeoJSON/"]
+    file_types = ['.h5', '.pkl', '.csv', '.geojson']
     for file_type in file_types:
-        Hindcast_Initialization.Hindcast_to_AWS(modelname, folderpath, AWSpath, file_type)
+        if file_type == '.h5' or file_type == '.pkl':
+            index = 0
+            continue
+        elif file_type == '.csv':
+            index = 1
+        else:
+            index = 2
+        Hindcast_Initialization.Hindcast_to_AWS(modelname, folderpath[index], AWSpath[index], file_type)
 
     if retries > 0:
         sweml_hindcast(new_year, threshold, Region_list, fSCA, frequency, NewSim, single_day)
